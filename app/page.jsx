@@ -5,6 +5,7 @@ import LocationCard from "./components/home/LocationCard";
 import Navbar from "./components/shared/Navbar";
 import TimeSection from "./components/home/TimeSection";
 import MosquesNearYou from "./components/home/MosquesNearYou";
+import RegisterMosque from "./components/home/RegisterMosque";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,6 +23,7 @@ export default function Home() {
         <TimeSection />
       </div>
       <MosquesNearYou />
+      <RegisterMosque />
     </main>
   );
 }
