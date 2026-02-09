@@ -1,17 +1,17 @@
 import { Inter, Poppins } from "next/font/google";
-import ActionButtons from "./components/home/ActionButtons";
-import Hero from "./components/home/Hero";
-import LocationCard from "./components/home/LocationCard";
-import TimeSection from "./components/home/TimeSection";
-import MosquesNearYou from "./components/home/MosquesNearYou";
-import RegisterMosque from "./components/home/RegisterMosque";
-import TrustSection from "./components/home/TrustSection";
+import Hero from "../components/home/Hero";
+import LocationCard from "../components/home/LocationCard";
+import ActionButtons from "../components/home/ActionButtons";
+import TimeSection from "../components/home/TimeSection";
+import MosquesNearYou from "../components/home/MosquesNearYou";
+import RegisterMosque from "../components/home/RegisterMosque";
+import TrustSection from "../components/home/TrustSection";
 
 const inter = Inter({
   subsets: ["latin"],
 });
 
-export default function Home() {
+export default function Main() {
   return (
     <main className={`${inter.className} w-full  flex flex-col items-center`}>
       <div
