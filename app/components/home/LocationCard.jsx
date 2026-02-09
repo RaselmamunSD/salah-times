@@ -9,7 +9,7 @@ export default function LocationCard() {
 
   return (
     <div className={`w-full max-w-md mt-10 ${inter.className}`}>
-      <div className="bg-white/10 backdrop-blur-lg  border border-[#5d9ca3] rounded-3xl p-6 relative overflow-hidden">
+      <div className="bg-white/10 backdrop-blur-lg  border border-[#5d9ca3] rounded-3xl p-6  overflow-hidden">
         <div className="flex justify-between items-center mb-4">
           <span className="text-white/60 text-sm font-medium">
             Current Location

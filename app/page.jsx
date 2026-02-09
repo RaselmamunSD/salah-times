@@ -6,6 +6,8 @@ import Navbar from "./components/shared/Navbar";
 import TimeSection from "./components/home/TimeSection";
 import MosquesNearYou from "./components/home/MosquesNearYou";
 import RegisterMosque from "./components/home/RegisterMosque";
+import TrustSection from "./components/home/TrustSection";
+import Footer from "./components/shared/Footer";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -14,7 +16,7 @@ const inter = Inter({
 export default function Home() {
   return (
     <main
-      className={`${inter.className} h-205.5 w-full px-4 lg:px-8 py-27 flex flex-col items-center bg-linear-to-br from-[#1F8A5B] to-[#1F6F8B] `}
+      className={`${inter.className} h-205.5 w-full px-4 lg:px-0 py-27 flex flex-col items-center bg-linear-to-br from-[#1F8A5B] to-[#1F6F8B] `}
     >
       <div className="relative flex flex-col items-center justify-center w-full max-w-4xl mt-12.5 mb-20">
         <Hero />
@@ -24,6 +26,8 @@ export default function Home() {
       </div>
       <MosquesNearYou />
       <RegisterMosque />
+      <TrustSection />
+      <Footer />
     </main>
   );
 }
