@@ -1,9 +1,10 @@
-"use client"; // Required for useState
+"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Nunito } from "next/font/google";
 import Link from "next/link";
-import { Menu, X } from "lucide-react"; // Install lucide-react if you haven't
+import { Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -11,13 +12,33 @@ const nunito = Nunito({
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
+
   const navLinks = ["Home", "Find Mosque", "Subscribe", "About", "Support"];
+  const isHome = pathname === "/";
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 80);
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [pathname]);
+
+  const solidBg = !isHome || scrolled || isOpen;
 
   return (
     <nav
-      className={`w-full max-w-[1100px] mt-6 px-4 md:px-0 ${nunito.className} relative z-50`}
+      className={`w-[320px] lg:w-[1100px] mt-6 px-4 md:px-0 ${nunito.className} fixed z-50 transition-all duration-300 ${
+        solidBg ?
+          "bg-[#1b8a6b]/90 shadow-xl rounded-[20px]"
+        : "bg-white/20 backdrop-blur-md rounded-[20px]"
+      }`}
     >
-      <div className="bg-white/20 backdrop-blur-md border border-white/20 rounded-[20px] px-6 md:px-11 py-[10px] flex items-center justify-between">
+      <div className="border border-white/20 rounded-[20px] px-6 md:px-11 py-[10px] flex items-center justify-between">
         {/* Desktop Links - Hidden on Mobile */}
         <div className="hidden md:flex gap-8 text-white">
           {navLinks.map((link) => (

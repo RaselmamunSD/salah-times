@@ -7,7 +7,7 @@ const inter = Inter({
 export default function Hero() {
   return (
     <div
-      className={`flex flex-col items-center text-center animate-fade-in ${inter.className}`}
+      className={`flex flex-col items-center text-center animate-fade-in ${inter.className} `}
     >
       <Image src={logo} width={234} height={234} alt="logo" />
 

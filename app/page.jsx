@@ -13,10 +13,8 @@ const inter = Inter({
 export default function Home() {
   return (
     <main
-      className={`${inter.className} h-205.5 w-full bg-linear-to-br from-[#1F8A5B] to-[#1F6F8B] flex flex-col items-center px-4 lg:px-8`}
+      className={`${inter.className} h-205.5 w-full px-4 lg:px-8 py-27 flex flex-col items-center bg-linear-to-br from-[#1F8A5B] to-[#1F6F8B] `}
     >
-      <Navbar />
-
       <div className="relative flex flex-col items-center justify-center w-full max-w-4xl mt-12.5 mb-20">
         <Hero />
         <LocationCard />
