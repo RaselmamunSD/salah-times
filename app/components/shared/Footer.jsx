@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import logo from "../../../public/logo.png";
 import { Nunito } from "next/font/google";
 import {
   Phone,
@@ -15,7 +16,7 @@ const nunito = Nunito({ subsets: ["latin"] });
 export default function Footer() {
   return (
     <footer
-      className={`${nunito.className} bg-white pt-16 pb-8 px-4 md:px-10 border-t border-gray-100`}
+      className={`${nunito.className} bg-white pt-16 pb-8 px-4 md:px-10 border-t border-gray-100 mt-25`}
     >
       <div className="max-w-7xl mx-auto">
         {/* Main Footer Content */}
@@ -24,7 +25,7 @@ export default function Footer() {
           <div className="flex flex-col gap-6">
             <div className="relative w-24 h-24">
               <Image
-                src="/SALAH.jpg" // Using your uploaded logo
+                src={logo}
                 alt="Salaah Logo"
                 fill
                 className="object-contain"
@@ -87,13 +88,13 @@ export default function Footer() {
             <p className="text-[#333] text-lg mb-6 leading-snug">
               Subscribe for prayer time updates and important announcements
             </p>
-            <div className="flex border border-[#006E3E] rounded-lg overflow-hidden h-12">
+            <div className="flex border border-[#1F8A5B] rounded-lg overflow-hidden h-12">
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="flex-1 px-4 outline-none text-gray-500 italic"
+                className="flex-1 px-4 outline-none text-gray-500 italic w-full"
               />
-              <button className="bg-[#218E5B] text-white px-6 font-medium hover:bg-[#1a7148] transition-colors">
+              <button className="bg-[#218E5B] text-white px-2 font-medium hover:bg-[#1a7148] transition-colors">
                 Subscribe
               </button>
             </div>

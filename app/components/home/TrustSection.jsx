@@ -32,7 +32,7 @@ const TrustSection = () => {
         </p>
       </div>
       {/* stats */}
-      <div className="lg:flex justify-around items-center space-y-4 lg:space-y-0">
+      <div className="lg:flex justify-around items-center space-y-4 lg:space-y-0 max-w-[1018px] mx-auto">
         {stats.map((stat, index) => (
           <div key={index} className="text-center">
             <h3 className={`${stat.color} font-bold text-4xl`}>
