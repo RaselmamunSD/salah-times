@@ -22,7 +22,7 @@ const TrustAndSecurity = () => {
     },
   ];
   return (
-    <div className="mt-15 bg-[#E9F5F0] max-w-[1216px] w-full mx-auto text-center py-8">
+    <div className="mt-15 bg-[#E9F5F0] max-w-[1216px] w-full mx-auto text-center rounded-[16px] py-8">
       <h1 className="text-[#1E293B] text-[30px] font-semibold mb-6">
         Trust & Accuracy
       </h1>
