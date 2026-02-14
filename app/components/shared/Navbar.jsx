@@ -58,6 +58,14 @@ export default function Navbar() {
       >
         Support
       </Link>
+      <Link
+        href="/dashboard"
+        className={`${isActive(
+          "/dashboard",
+        )} transition-colors font-light text-xl`}
+      >
+        Dashboard
+      </Link>
     </>
   );
 
