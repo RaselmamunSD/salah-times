@@ -3,7 +3,15 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  User,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Camera,
+} from "lucide-react";
 import logo from "../../../public/logo.png";
 
 export default function SignUpPage() {
@@ -20,6 +28,28 @@ export default function SignUpPage() {
         </div>
 
         <form className="mt-8 space-y-6">
+          {/* Profile Photo */}
+          <div className="space-y-2">
+            <label
+              htmlFor="photo"
+              className="text-sm font-medium text-[#1b9c5e]"
+            >
+              Profile Photo
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <Camera size={18} />
+              </div>
+              <input
+                id="photo"
+                name="photo"
+                type="file"
+                accept="image/*"
+                className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1b9c5e] focus:border-[#1b9c5e] outline-none transition-colors sm:text-sm text-gray-500 file:mr-4 file:py-1 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#e8f5ee] file:text-[#1b9c5e] hover:file:bg-[#d1eadd] cursor-pointer"
+              />
+            </div>
+          </div>
+
           {/* Full Name */}
           <div className="space-y-2">
             <label
