@@ -205,11 +205,6 @@ export default function FindMosque() {
         </div>
       </div>
 
-      {/* Floating Action Button */}
-      <button className="fixed bottom-8 right-8 w-14 h-14 bg-[#1E7461] hover:bg-[#165a4b] rounded-full flex items-center justify-center shadow-lg text-white transition-transform hover:scale-105 active:scale-95 z-50">
-        <MessageCircle size={24} fill="white" />
-      </button>
-
       {/* ========================================= */}
       {/* TIMETABLE MODAL */}
       {/* ========================================= */}
