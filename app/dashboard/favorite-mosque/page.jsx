@@ -20,7 +20,7 @@ const mosques = [
 
 export default function FavoriteMosques() {
   return (
-    <div className="min-h-screen bg-[#F8F9FA] p-6 lg:p-12 text-slate-800">
+    <div className="min-h-screen bg-[#F8F9FA] lg:p-12 text-slate-800">
       {/* Header Section */}
       <div className="max-w-7xl mx-auto mb-8">
         <h1 className="text-2xl font-bold text-[#1E293B]">Favorite Mosques</h1>
@@ -34,10 +34,10 @@ export default function FavoriteMosques() {
         {mosques.map((mosque) => (
           <div
             key={mosque.id}
-            className="bg-white rounded-2xl p-4 md:p-5 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 transition-all hover:shadow-md"
+            className="bg-white rounded-2xl p-4 md:p-5 lg:flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 transition-all hover:shadow-md"
           >
             {/* Left side: Icon and Info */}
-            <div className="flex items-center gap-4">
+            <div className="lg:flex items-center gap-4 mb-4 lg:mb-0">
               {/* Mosque Icon Box */}
               <div className="w-14 h-14 bg-[#238B57] rounded-xl flex items-center justify-center text-2xl shadow-inner">
                 {/* In a real app, you'd use the <img> tag for the specific mosque graphic */}
