@@ -34,7 +34,7 @@ export default function AccountSettings() {
                 </p>
               </div>
               {/* Checkbox Placeholder to match the image */}
-              <div className="w-[22px] h-[22px] bg-slate-600 rounded-md cursor-pointer hover:bg-slate-700 transition-colors"></div>
+              <input type="checkbox" className="checkbox" />
             </div>
 
             {/* Item 2 */}
@@ -48,7 +48,7 @@ export default function AccountSettings() {
                 </p>
               </div>
               {/* Checkbox Placeholder */}
-              <div className="w-[22px] h-[22px] bg-slate-600 rounded-md cursor-pointer hover:bg-slate-700 transition-colors"></div>
+              <input type="checkbox" className="checkbox" />
             </div>
           </div>
         </div>
@@ -69,7 +69,7 @@ export default function AccountSettings() {
               </p>
             </div>
             {/* Checkbox Placeholder */}
-            <div className="w-[22px] h-[22px] bg-slate-600 rounded-md cursor-pointer hover:bg-slate-700 transition-colors"></div>
+            <input type="checkbox" className="checkbox" />
           </div>
         </div>
 
