@@ -91,7 +91,7 @@ export default function FloatingChatButton() {
       {/* Floating Toggle Button */}
       <button
         onClick={toggleChat}
-        className="w-16 h-16 bg-gradient-to-b from-[#249970] to-[#1B6A4E] hover:from-[#1e8460] hover:to-[#165740] rounded-full flex items-center justify-center shadow-[0_8px_30px_rgba(31,138,91,0.3)] text-white transition-transform hover:scale-105 active:scale-95"
+        className="w-16 h-16 cursor-pointer bg-gradient-to-b from-[#249970] to-[#1B6A4E] hover:from-[#1e8460] hover:to-[#165740] rounded-full flex items-center justify-center shadow-[0_8px_30px_rgba(31,138,91,0.3)] text-white transition-transform hover:scale-105 active:scale-95"
       >
         {isOpen ?
           <X size={28} />
