@@ -9,6 +9,7 @@ import {
   MapPin,
   Mail,
   Smartphone,
+  Calendar,
 } from "lucide-react";
 import { Inter, Lato } from "next/font/google";
 const inter = Inter({
@@ -25,24 +26,59 @@ const MOSQUES = [
   { id: 2, name: "Gulshan Central Mosque", address: "Gulshan • 3.1 km" },
   { id: 3, name: "Mohammedpur Shia Mosque", address: "Mohammedpur • 5.0 km" },
 ];
-
+const DURATION_OPTIONS = [
+  { label: "1", sub: "Day", value: 1 },
+  { label: "7", sub: "Days", value: 7 },
+  { label: "15", sub: "Days", value: 15 },
+  { label: "30", sub: "Days", value: 30 },
+];
+const PRAYER_LIST = [
+  { id: "fajr", name: "Fajr", desc: "Dawn prayer notification" },
+  { id: "dhuhr", name: "Dhuhr", desc: "Noon prayer notification" },
+  { id: "asr", name: "Asr", desc: "Afternoon prayer notification" },
+  { id: "maghrib", name: "Maghrib", desc: "Sunset prayer notification" },
+  { id: "isha", name: "Isha", desc: "Night prayer notification" },
+  { id: "jumuah", name: "Jumu'ah", desc: "Friday prayer reminder" },
+];
 export default function SubscriptionFlow() {
   const [step, setStep] = useState(1);
   const [method, setMethod] = useState("whatsapp");
   const [selectedMosques, setSelectedMosques] = useState([1]);
+  const [duration, setDuration] = useState(30);
   const [preferences, setPreferences] = useState(
     PRAYERS.reduce((acc, prayer) => {
       acc[prayer] = true;
       return acc;
     }, {}),
   );
-
+  const [selectedPrayers, setSelectedPrayers] = useState(
+    PRAYER_LIST.map((p) => p.id),
+  );
+  const isAllSelected = selectedPrayers.length === PRAYER_LIST.length;
+  const getEndDate = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + duration);
+    return date.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
   const toggleMosque = (id) => {
     setSelectedMosques((prev) =>
       prev.includes(id) ? prev.filter((mId) => mId !== id) : [...prev, id],
     );
   };
+  const toggleAll = () => {
+    if (isAllSelected) setSelectedPrayers([]);
+    else setSelectedPrayers(PRAYER_LIST.map((p) => p.id));
+  };
 
+  const togglePrayer = (id) => {
+    setSelectedPrayers((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
+    );
+  };
   const togglePreference = (prayer) => {
     setPreferences((prev) => ({
       ...prev,
@@ -271,51 +307,126 @@ export default function SubscriptionFlow() {
             </div>
           )}
 
-          {/* ================= STEP 3: PREFERENCES ================= */}
+          {/* ================= STEP 3: PREFERENCES (PIXEL PERFECT UPDATE) ================= */}
           {step === 3 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-xl font-bold text-center text-slate-800 mb-2">
+              <h2 className="text-2xl font-bold text-slate-800 mb-1">
                 Prayer Preferences
               </h2>
-              <p className="text-center text-sm text-slate-500 mb-8">
-                Select which prayers you want to be notified for.
+              <p className="text-sm text-slate-500 mb-8">
+                Select which prayers you want notifications for
               </p>
 
-              <div className="bg-white border border-gray-100 rounded-xl overflow-hidden mb-8">
-                {PRAYERS.map((prayer, index) => (
-                  <div
-                    key={prayer}
-                    className={`flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors ${index !== PRAYERS.length - 1 ? "border-b border-gray-50" : ""}`}
-                    onClick={() => togglePreference(prayer)}
-                  >
-                    <span className="text-sm font-semibold text-slate-700">
-                      {prayer}
-                    </span>
-                    {/* Toggle Switch */}
-                    <div
-                      className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${preferences[prayer] ? "bg-[#238B57]" : "bg-gray-200"}`}
+              {/* Notification Duration Section */}
+              <div className="bg-[#F6FBF9] border border-[#E8F5EE] rounded-2xl p-5 mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="bg-[#238B57] p-1.5 rounded-lg text-white">
+                    <Calendar size={16} />
+                  </div>
+                  <span className="text-sm font-bold text-slate-800">
+                    Notification Duration
+                  </span>
+                </div>
+                <p className="text-[13px] text-slate-500 mb-4">
+                  How many days do you want to receive notifications?
+                </p>
+
+                <div className="grid grid-cols-4 gap-3 mb-5">
+                  {DURATION_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setDuration(opt.value)}
+                      className={`flex flex-col items-center justify-center py-3 rounded-xl border-2 transition-all ${duration === opt.value ? "bg-white border-[#238B57] shadow-sm" : "bg-white border-gray-100 text-gray-400"}`}
                     >
-                      <div
-                        className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${preferences[prayer] ? "translate-x-5" : "translate-x-0"}`}
-                      />
+                      <span
+                        className={`text-lg font-bold ${duration === opt.value ? "text-[#238B57]" : "text-slate-700"}`}
+                      >
+                        {opt.label}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider font-medium">
+                        {opt.sub}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="bg-white border border-gray-100 rounded-xl p-4">
+                  <p className="text-xs font-bold text-slate-800">
+                    Selected Duration:{" "}
+                    <span className="font-medium text-slate-600">
+                      {duration} days
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    You will receive notifications from today until{" "}
+                    {getEndDate()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Select Prayers Section */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-800 mb-4">
+                  Select Prayers
+                </h3>
+
+                {/* All Prayers Toggle */}
+                <div
+                  onClick={toggleAll}
+                  className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${isAllSelected ? "bg-[#E8F5EE] border-[#238B57]" : "bg-white border-gray-100"}`}
+                >
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800">
+                      All Prayers
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Receive notifications for all 5 daily prayers
+                    </p>
+                  </div>
+                  {isAllSelected && (
+                    <div className="bg-[#238B57] text-white p-1 rounded-full">
+                      <Check size={14} strokeWidth={4} />
                     </div>
+                  )}
+                </div>
+
+                {/* Individual Prayers */}
+                {PRAYER_LIST.map((prayer) => (
+                  <div
+                    key={prayer.id}
+                    onClick={() => togglePrayer(prayer.id)}
+                    className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${selectedPrayers.includes(prayer.id) ? "border-[#238B57] bg-white shadow-sm" : "border-gray-100 bg-white"}`}
+                  >
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800">
+                        {prayer.name}
+                      </h4>
+                      <p className="text-[11px] text-slate-400">
+                        {prayer.desc}
+                      </p>
+                    </div>
+                    {selectedPrayers.includes(prayer.id) && !isAllSelected && (
+                      <div className="text-[#238B57]">
+                        <Check size={18} strokeWidth={3} />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
 
-              {/* Navigation Actions */}
-              <div className="flex gap-4">
+              {/* Action Buttons */}
+              <div className="flex gap-4 mt-10">
                 <button
                   onClick={prevStep}
-                  className="w-1/3 border border-gray-200 text-slate-600 hover:bg-gray-50 font-bold rounded-xl py-4 text-sm transition-colors"
+                  className="flex-1 bg-gray-50 text-slate-500 font-bold rounded-xl py-4 text-sm hover:bg-gray-100 transition-colors"
                 >
                   Back
                 </button>
                 <button
                   onClick={nextStep}
-                  className="w-2/3 bg-[#238B57] hover:bg-[#1a6e44] text-white font-bold rounded-xl py-4 text-sm transition-colors shadow-sm"
+                  className="flex-[2] bg-[#238B57] hover:bg-[#1a6e44] text-white font-bold rounded-xl py-4 text-sm transition-all shadow-md flex items-center justify-center gap-2"
                 >
-                  Confirm Subscription
+                  Complete Subscription <Check size={18} />
                 </button>
               </div>
             </div>

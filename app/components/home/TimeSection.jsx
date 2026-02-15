@@ -4,6 +4,7 @@ import calendar from "../../../public/icons/calendar.png";
 import rightArrow from "../../../public/icons/rightArrow.png";
 import TimeCard from "../cards/TimeCard";
 import { Inter, Poppins } from "next/font/google";
+import Link from "next/link";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -86,7 +87,10 @@ const TimeSection = () => {
           </div>
           <div>
             {/* Subscribe button */}
-            <button className="bg-[#1F8A5B] py-3 px-6 text-white rounded-[10px] flex items-center gap-1 justify-center text-base cursor-pointer">
+            <Link
+              href="/subscribe"
+              className="bg-[#1F8A5B] py-3 px-6 text-white rounded-[10px] flex items-center gap-1 justify-center text-base cursor-pointer"
+            >
               Subscribe{" "}
               <Image
                 src={rightArrow}
@@ -94,7 +98,7 @@ const TimeSection = () => {
                 height={18}
                 alt="right arrow"
               />
-            </button>
+            </Link>
           </div>
         </div>
       </div>
