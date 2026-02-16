@@ -249,14 +249,16 @@ export default function RegisterMosqueFlow() {
                         </td>
                         <td className="px-6 py-5">
                           <input
-                            type="text"
+                            type="time"
+                            step="60"
                             placeholder="00:00 AM"
                             className="w-full text-sm bg-transparent border-b border-slate-100 focus:border-[#238B57] focus:outline-none pb-1"
                           />
                         </td>
                         <td className="px-6 py-5">
                           <input
-                            type="text"
+                            type="time"
+                            step="60"
                             placeholder="00:00 AM"
                             className="w-full text-sm bg-transparent border-b border-slate-100 focus:border-[#238B57] focus:outline-none pb-1"
                           />
