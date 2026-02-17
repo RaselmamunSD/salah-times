@@ -106,9 +106,18 @@ export default function Navbar() {
             : <Menu size={32} />}
           </button>
         </div>
-
+        {/* User Profile */}
+        <div className="flex lg:hidden items-center gap-3">
+          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-gray-100 cursor-pointer shadow-sm">
+            <img
+              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+              alt="User profile"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
         {/* Auth Buttons */}
-        <div className="flex items-center gap-4 md:gap-6">
+        <div className="hidden lg:flex items-center gap-4 md:gap-6">
           <Link
             href="/login"
             className="text-[#26FFA0] font-semibold text-lg md:text-xl"
@@ -134,6 +143,18 @@ export default function Navbar() {
       >
         <div className="bg-[#1b8a6b]/90 backdrop-blur-xl border border-white/20 rounded-[20px] p-6 flex flex-col gap-4 shadow-2xl text-white">
           {links}
+          <Link
+            href="/login"
+            className="text-[#26FFA0] text-center font-semibold text-lg md:text-xl"
+          >
+            Login
+          </Link>
+          <Link
+            href="/register"
+            className="text-center bg-gradient-to-b from-[#ADFFDB] to-[#00FF8F] cursor-pointer text-[#006E3E] font-semibold px-4 py-2 md:p-3 rounded-[10px] transition-all shadow-xl text-base md:text-[20px] whitespace-nowrap"
+          >
+            Registration
+          </Link>
         </div>
       </div>
     </nav>
