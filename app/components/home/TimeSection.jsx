@@ -65,7 +65,7 @@ const TimeSection = () => {
       </div>
 
       {/* Time Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 mt-6">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mt-6">
         {times.map((time, index) => (
           <TimeCard key={index} time={time} />
         ))}

@@ -15,7 +15,6 @@ import {
   MessageCircle,
 } from "lucide-react";
 import Image from "next/image";
-import Footer from "../components/shared/Footer";
 
 const navItems = [
   {
@@ -115,7 +114,7 @@ export default function DashboardLayout({ children }) {
         </aside>
 
         {/* MAIN CONTENT AREA */}
-        <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 h-screen lg:overflow-hidden">
           {/* HEADER / TOP NAV */}
           <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-6 lg:px-12 shrink-0">
             <button
@@ -151,10 +150,9 @@ export default function DashboardLayout({ children }) {
           </header>
 
           {/* PAGE CONTENT SCROLL AREA */}
-          <main className="p-6 lg:p-12 relative">{children}</main>
+          <main className="p-3 lg:p-12 relative">{children}</main>
         </div>
       </div>
-      <Footer />
     </>
   );
 }

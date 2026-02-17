@@ -16,7 +16,7 @@ export default function Main() {
     <main className={`${inter.className} w-full  flex flex-col items-center`}>
       <div
         className="flex flex-col items-center justify-center mb-20
-             bg-linear-to-br from-[#1F8A5B] to-[#1F6F8B] w-full pt-40 lg:pt-110 lg:h-[822px] px-4 lg:px-0"
+             bg-linear-to-br from-[#1F8A5B] to-[#1F6F8B] w-full pt-32 lg:pt-100 lg:h-[920px] px-4 lg:px-0"
       >
         <Hero />
         <LocationCard />

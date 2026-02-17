@@ -18,7 +18,7 @@ export default function LocationCard() {
             <MapPin size={12} /> Change
           </button>
         </div>
-        <div className="text-white text-2xl font-medium text-center py-2">
+        <div className="text-white lg:text-2xl font-medium text-center py-2">
           {location}
         </div>
       </div>

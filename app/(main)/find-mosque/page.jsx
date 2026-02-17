@@ -80,13 +80,10 @@ export default function FindMosque() {
         <h1
           className={`font-bold text-4xl lg:text-[66px] text-white ${lato.className}`}
         >
-          <span className="text-[#26FFA0] italic">About</span> Salaah-Times
+          <span className="text-[#26FFA0] italic">Find</span> a Mosque
         </h1>
         <p className={`lg:text-2xl text-[#D0E0FF] ${inter.className} mt-4`}>
-          Your reliable Islamic digital companion for accurate prayer times
-          across
-          <br />
-          United Kingdom.
+          Discover mosques near you with accurate prayer times
         </p>
       </div>
 
