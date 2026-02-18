@@ -66,6 +66,15 @@ export default function Navbar() {
       >
         Dashboard
       </Link>
+
+      <Link
+        href="/register-mosque"
+        className={`${isActive(
+          "/dashboard",
+        )} transition-colors font-light text-xl lg:hidden`}
+      >
+        Register Your Mosque
+      </Link>
     </>
   );
 

@@ -16,7 +16,7 @@ const nunito = Nunito({ subsets: ["latin"] });
 export default function Footer() {
   return (
     <footer
-      className={`${nunito.className} bg-white pt-16 pb-8 px-4 md:px-10 border-t border-gray-100 mt-25`}
+      className={`${nunito.className} bg-white pt-16 pb-8 px-4 md:px-10 border-t border-gray-100 lg:mt-25`}
     >
       <div className="max-w-7xl mx-auto">
         {/* Main Footer Content */}

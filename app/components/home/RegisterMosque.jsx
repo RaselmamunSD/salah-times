@@ -27,7 +27,7 @@ const RegisterMosque = () => {
     },
   ];
   return (
-    <section className="lg:w-[1216px] mx-auto my-25 lg:flex shadow-2xl">
+    <section className="lg:w-[1216px] mx-auto my-10 lg:my-25 lg:flex shadow-2xl">
       {/* left side */}
       <div className="flex-1 bg-linear-to-b from-[#1F8A5B] to-[#1F6F8B] p-12 text-white lg:rounded-l-2xl">
         <h1 className="font-semibold text-[30px] mb-4">Register Your Mosque</h1>

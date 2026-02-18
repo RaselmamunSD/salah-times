@@ -17,23 +17,22 @@ const MosqueCard = ({ mosque }) => {
   return (
     <div className="rounded-[14px] shadow-xl p-6">
       {/* Top */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="p-3 rounded-[14px] bg-linear-to-br from-[#1F8A5B] to-[#1F6F8B] w-12">
-          <Image src={mosqueIcon} width={24} height={32} alt="mosque icon" />
-        </div>
-        <EmptyStar />
-      </div>
+
       {/* mosque details */}
       <div>
-        <h3
-          className={`text-base text-[#1E293B] font-semibold ${poppins.className} mb-2`}
-        >
-          {mosque.name}
-        </h3>
-
+        <div className="flex justify-between">
+          <h3
+            className={`text-base text-[#1E293B] font-semibold ${poppins.className} mb-2`}
+          >
+            {mosque.name}
+          </h3>
+          <div className="flex items-start justify-between mb-4">
+            <EmptyStar />
+          </div>
+        </div>
         {/* location and distance */}
         <div
-          className={`text-sm text-[#64748B] flex items-center gap-1 ${inter.className} border-b border-gray-100 pb-4 mb-[13px]`}
+          className={`text-sm text-[#64748B] flex items-center gap-1 ${inter.className} mb-[13px]`}
         >
           <p className="flex items-center gap-1">
             <Image

@@ -42,7 +42,7 @@ const TimeSection = () => {
   ];
   return (
     <div
-      className={`lg:w-[1216px] bg-white shadow-xl lg:rounded-2xl ${poppins.className} p-8 shadow-2xl mt-9 lg:mt-14`}
+      className={`lg:w-[1216px] bg-white shadow-xl lg:rounded-2xl ${poppins.className} p-6 shadow-2xl mt-4 lg:mt-14`}
     >
       <div className="lg:flex justify-between">
         <div>
@@ -65,7 +65,7 @@ const TimeSection = () => {
       </div>
 
       {/* Time Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mt-6">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mt-2 lg:mt-6">
         {times.map((time, index) => (
           <TimeCard key={index} time={time} />
         ))}

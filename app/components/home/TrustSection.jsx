@@ -21,7 +21,7 @@ const TrustSection = () => {
   return (
     <div className="bg-linear-to-r from-[#E9F5F0] to-[#EEF7FB] w-full py-[50px] px-4 lg:px-0">
       {/*Texts*/}
-      <div className="text-center mb-[72px]">
+      <div className="text-center mb-5 lg:mb-[72px]">
         <h1 className="font-semibold text-[30px] text-[#1E293B] mb-4">
           Trusted by the Community
         </h1>

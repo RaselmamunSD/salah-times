@@ -7,7 +7,7 @@ const nunito = Nunito({
 export default function ActionButtons() {
   return (
     <div
-      className={`flex flex-col md:flex-row gap-4 mt-6 lg:mt-12 w-full max-w-lg ${nunito.className}`}
+      className={`flex flex-col md:flex-row gap-4 mt-4 lg:mt-12 w-full max-w-lg ${nunito.className}`}
     >
       <Link
         href={"/find-mosque"}
