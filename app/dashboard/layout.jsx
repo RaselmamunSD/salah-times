@@ -14,6 +14,7 @@ import {
   X,
   MessageCircle,
 } from "lucide-react";
+import { IoIosNotificationsOutline } from "react-icons/io";
 import Image from "next/image";
 
 const navItems = [
@@ -24,6 +25,11 @@ const navItems = [
   },
   { name: "Profile", icon: User, href: "/dashboard/profile" },
   { name: "Favorite Mosques", icon: Star, href: "/dashboard/favorite-mosque" },
+  {
+    name: "Subscribe Mosques",
+    icon: IoIosNotificationsOutline,
+    href: "/dashboard/subscribe-mosque",
+  },
   { name: "Location", icon: MapPin, href: "/dashboard/location" },
   { name: "Settings", icon: Settings, href: "/dashboard/settings" },
 ];
