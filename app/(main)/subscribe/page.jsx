@@ -368,7 +368,8 @@ export default function SubscriptionFlow() {
                 <p className="text-[13px] text-slate-500 mb-4">
                   How many days do you want to receive notifications?
                 </p>
-
+                {/*
+                 */}
                 <div className="grid grid-cols-4 gap-3 mb-5 ">
                   {DURATION_OPTIONS.map((opt) => (
                     <button
