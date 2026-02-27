@@ -23,6 +23,7 @@ export default function Hero() {
         width={234}
         height={234}
         alt="logo"
+        loading="eager"
         className="md:h-[234px] md:w-[234px] h-[150px] w-[150px]"
       />
 

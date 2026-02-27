@@ -1,0 +1,46 @@
+[Unit]
+Description=SalahTimes Next.js Application
+Documentation=https://github.com/yourusername/salah-times
+After=network.target salahtime.service
+Wants=salahtime.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/home/mdraselbackenddev/Rasel/zuhha/salah-times
+
+# Node environment
+Environment="NODE_ENV=production"
+Environment="PORT=3000"
+Environment="HOSTNAME=127.0.0.1"
+
+# Next.js start command
+ExecStart=/usr/bin/npm start
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Timeout
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+# Resource limits
+MemoryMax=1G
+MemoryHigh=800M
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/salah-times /var/www/salah-times
+
+# Output redirection
+StandardOutput=append:/var/log/salah-times/stdout.log
+StandardError=append:/var/log/salah-times/error.log
+
+[Install]
+WantedBy=multi-user.target
+

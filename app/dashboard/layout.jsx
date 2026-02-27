@@ -1,8 +1,8 @@
 "use client";
-import logo from "../../public/logo.png";
+
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   User,
@@ -11,11 +11,11 @@ import {
   Settings,
   LogOut,
   Menu,
-  X,
-  MessageCircle,
 } from "lucide-react";
 import { IoIosNotificationsOutline } from "react-icons/io";
 import Image from "next/image";
+import { useAuth } from "../providers/AuthProvider";
+import { ProtectedRoute } from "../components/ProtectedRoute";
 
 const navItems = [
   {
@@ -42,10 +42,30 @@ const topNavItems = [
   { name: "Support", href: "/support" },
 ];
 
-export default function DashboardLayout({ children }) {
+function DashboardLayoutContent({ children }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-  console.log(pathname);
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+  };
+
+  // Get user display name
+  const userName = user
+    ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username || user.email
+    : "User";
+
+  // Get user initials for avatar
+  const userInitials = userName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
     <>
       <div className="bg-[#F8F9FA] flex text-slate-700">
@@ -69,7 +89,7 @@ export default function DashboardLayout({ children }) {
             {/* Logo Section */}
             <Link href="/" className="p-6 flex items-center gap-3">
               <Image
-                src={logo}
+                src="/logo.png"
                 alt="Logo"
                 width={36}
                 height={36}
@@ -83,20 +103,17 @@ export default function DashboardLayout({ children }) {
             {/* Navigation Links */}
             <nav className="flex-1 px-4 space-y-1 mt-4">
               {navItems.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  (item.name === "Favorite Mosques" && pathname === "/");
+                const isActive = pathname === item.href;
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
                     className={`
                     flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
-                    ${
-                      isActive ?
-                        "bg-[#E9F3EE] text-[#238B57] font-semibold"
-                      : "text-slate-500 hover:bg-gray-50 hover:text-slate-800"
-                    }
+                    ${isActive
+                        ? "bg-[#E9F3EE] text-[#238B57] font-semibold"
+                        : "text-slate-500 hover:bg-gray-50 hover:text-slate-800"
+                      }
                   `}
                   >
                     <item.icon
@@ -111,7 +128,10 @@ export default function DashboardLayout({ children }) {
 
             {/* Logout Section */}
             <div className="p-4 border-t border-gray-50">
-              <button className="flex items-center gap-3 px-4 py-3 w-full text-red-500 hover:bg-red-50 rounded-xl transition-colors">
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 px-4 py-3 w-full text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+              >
                 <LogOut size={20} />
                 <span className="text-[14px] font-semibold">Logout</span>
               </button>
@@ -145,12 +165,22 @@ export default function DashboardLayout({ children }) {
 
             {/* User Profile */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-black cursor-pointer shadow-sm">
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png"
-                  alt="User profile"
-                  className="w-full h-full object-cover"
-                />
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-medium text-slate-700">{userName}</p>
+                <p className="text-xs text-slate-500">Welcome back!</p>
+              </div>
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#1b9c5e] cursor-pointer shadow-sm bg-[#1b9c5e] flex items-center justify-center">
+                {user?.profile_image ? (
+                  <img
+                    src={user.profile_image}
+                    alt={userName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white text-sm font-semibold">
+                    {userInitials}
+                  </span>
+                )}
               </div>
             </div>
           </header>
@@ -162,3 +192,13 @@ export default function DashboardLayout({ children }) {
     </>
   );
 }
+
+// Export wrapped version with protection
+export default function DashboardLayout({ children }) {
+  return (
+    <ProtectedRoute>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </ProtectedRoute>
+  );
+}
+

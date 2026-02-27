@@ -1,10 +1,14 @@
 "use client";
-import logo from "../../public/logo.png";
+
 import React from "react";
-import { Star, MapPin, ArrowRight, User } from "lucide-react";
+import { Star, MapPin, ArrowRight, User, LogOut } from "lucide-react";
 import Image from "next/image";
+import { ProtectedRoute } from "../components/ProtectedRoute";
+import { useAuth } from "../providers/AuthProvider";
 
 const DashboardHome = () => {
+  const { user, logout, isAuthenticated } = useAuth();
+
   const prayerTimes = [
     { name: "Fajr", time: "05:45 AM" },
     { name: "Sunrise", time: "07:12 AM" },
@@ -14,12 +18,29 @@ const DashboardHome = () => {
     { name: "Isha", time: "07:25 PM" },
   ];
 
+  // Get user display name
+  const userName = user
+    ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username || user.email
+    : "User";
+
   return (
     <div className="max-w-6xl mx-auto p-8 bg-[#F8F9FA] min-h-screen text-slate-800">
       {/* Header Section */}
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-[#1E293B]">Dashboard</h1>
-        <p className="text-slate-500 mt-1">Welcome back, Abdullah Rahman</p>
+      <header className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-[#1E293B]">Dashboard</h1>
+          <p className="text-slate-500 mt-1">Welcome back, {userName}</p>
+        </div>
+
+        {/* Logout Button */}
+        <button
+          onClick={logout}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+          title="Logout"
+        >
+          <LogOut size={18} />
+          <span className="hidden sm:inline">Logout</span>
+        </button>
       </header>
 
       {/* Top Cards Grid */}
@@ -76,14 +97,19 @@ const DashboardHome = () => {
         <div className="bg-white p-6 rounded-2xl shadow-[0_2px_15px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col h-full">
           <div className="flex items-start gap-4 mb-4">
             <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100">
-              {/* Replace with your actual image path */}
-              <Image
-                width={"fill"}
-                height={"fill"}
-                src={logo}
-                alt="Profile"
-                className="w-full h-full object-cover"
-              />
+              {user?.profile_image ? (
+                <Image
+                  width={48}
+                  height={48}
+                  src={user.profile_image}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-[#1b9c5e] text-white">
+                  <User size={24} />
+                </div>
+              )}
             </div>
             <div>
               <div className="text-[17px] font-bold text-[#1E293B] leading-tight">
@@ -126,4 +152,14 @@ const DashboardHome = () => {
   );
 };
 
-export default DashboardHome;
+// Wrap with ProtectedRoute to ensure only authenticated users can access
+const ProtectedDashboard = () => {
+  return (
+    <ProtectedRoute>
+      <DashboardHome />
+    </ProtectedRoute>
+  );
+};
+
+export default ProtectedDashboard;
+
