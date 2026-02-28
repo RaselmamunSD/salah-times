@@ -17,12 +17,44 @@ import {
   Globe,
 } from "lucide-react";
 import { Inter, Lato } from "next/font/google";
+import { mosqueService } from "../../services/mosque";
 
 const inter = Inter({ subsets: ["latin"] });
 const lato = Lato({ subsets: ["latin"], weight: ["400", "700", "900"] });
 
 // --- Data Structures ---
-const PRAYERS = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
+const PRAYERS = [
+  {
+    label: "Fajr",
+    beginningKey: "fajr_beginning",
+    jamaahKey: "fajr_jamaah",
+  },
+  {
+    label: "Sunrise",
+    beginningKey: "sunrise",
+    jamaahKey: null,
+  },
+  {
+    label: "Dhuhr",
+    beginningKey: "dhuhr_beginning",
+    jamaahKey: "dhuhr_jamaah",
+  },
+  {
+    label: "Asr",
+    beginningKey: "asr_beginning",
+    jamaahKey: "asr_jamaah",
+  },
+  {
+    label: "Maghrib",
+    beginningKey: "maghrib_sunset",
+    jamaahKey: "maghrib_jamaah",
+  },
+  {
+    label: "Isha",
+    beginningKey: "isha_beginning",
+    jamaahKey: "isha_jamaah",
+  },
+];
 
 const FACILITIES = [
   { id: "wudu", label: "Wudu Area" },
@@ -43,10 +75,162 @@ export default function RegisterMosqueFlow() {
     address: "",
     area: "",
     facilities: [],
+    additionalInfo: "",
+    prayerTimes: {
+      fajr_beginning: "",
+      fajr_jamaah: "",
+      sunrise: "",
+      dhuhr_beginning: "",
+      dhuhr_jamaah: "",
+      asr_beginning: "",
+      asr_jamaah: "",
+      maghrib_sunset: "",
+      maghrib_jamaah: "",
+      isha_beginning: "",
+      isha_jamaah: "",
+    },
   });
+
+  const handleChange = (field) => (e) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: e.target.value,
+    }));
+  };
+
+  const toggleFacility = (id) => {
+    setFormData((prev) => {
+      const exists = prev.facilities.includes(id);
+      return {
+        ...prev,
+        facilities: exists
+          ? prev.facilities.filter((f) => f !== id)
+          : [...prev.facilities, id],
+      };
+    });
+  };
+
+  const [submissionError, setSubmissionError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const nextStep = () => setStep((prev) => Math.min(prev + 1, 5));
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
+
+  const buildWhatsAppMessage = () => {
+    const prayerTimeLines = PRAYERS.map((prayer) => {
+      const beginningValue = formData.prayerTimes[prayer.beginningKey] || "-";
+      const jamaahValue = prayer.jamaahKey
+        ? formData.prayerTimes[prayer.jamaahKey] || "-"
+        : "N/A";
+
+      return `${prayer.label}: Beginning ${beginningValue}, Iqamah ${jamaahValue}`;
+    });
+
+    const lines = [
+      "Assalamu Alaikum,",
+      "",
+      "New mosque registration request:",
+      `🕌 Mosque Name: ${formData.mosqueName || "-"}`,
+      `👤 Contact Person: ${formData.contactPerson || "-"}`,
+      `📞 Phone: ${formData.phone || "-"}`,
+      `📧 Email: ${formData.email || "-"}`,
+      `📍 Address: ${formData.address || "-"}`,
+      `📍 Area/District: ${formData.area || "-"}`,
+      `📝 Additional Info: ${formData.additionalInfo || "-"}`,
+      "",
+      "Prayer Times:",
+      ...prayerTimeLines,
+      "",
+      `Facilities: ${formData.facilities.length
+        ? formData.facilities.join(", ")
+        : "Not specified"
+      }`,
+      "",
+      "Please review and contact back in shaa Allah.",
+    ];
+
+    return lines.join("\n");
+  };
+
+  const handlePrayerTimeChange = (field) => (e) => {
+    const value = e.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      prayerTimes: {
+        ...prev.prayerTimes,
+        [field]: value,
+      },
+    }));
+  };
+
+  const getCurrentCoordinates = () =>
+    new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve({ latitude: null, longitude: null });
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        () => resolve({ latitude: null, longitude: null }),
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    });
+
+  const handleSubmitToWhatsApp = async () => {
+    setSubmissionError("");
+
+    if (!formData.mosqueName || !formData.phone || !formData.address) {
+      setSubmissionError(
+        "Please fill Mosque Name, Phone Number and Address before continuing."
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { latitude, longitude } = await getCurrentCoordinates();
+
+      await mosqueService.registerMosqueRequest({
+        mosque_name: formData.mosqueName,
+        contact_person: formData.contactPerson,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        area: formData.area,
+        latitude,
+        longitude,
+        facilities: formData.facilities,
+        additional_info: formData.additionalInfo,
+        prayer_times: formData.prayerTimes,
+      });
+
+      const adminNumber =
+        process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "+8801738060329";
+      const numericPhone = adminNumber.replace(/[^\d]/g, "");
+      const text = encodeURIComponent(buildWhatsAppMessage());
+      const url = `https://wa.me/${numericPhone}?text=${text}`;
+
+      if (typeof window !== "undefined") {
+        window.open(url, "_blank");
+      }
+
+      setStep(5);
+    } catch (error) {
+      const message =
+        error?.response?.data?.detail ||
+        "Failed to submit request. Please try again.";
+      setSubmissionError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className={`min-h-screen bg-[#F8FAFC] flex flex-col `}>
@@ -84,7 +268,7 @@ export default function RegisterMosqueFlow() {
                     >
                       {step > idx + 1 ?
                         <Check size={16} strokeWidth={3} />
-                      : idx + 1}
+                        : idx + 1}
                     </div>
                     <span
                       className={`text-[11px] font-bold mt-3 uppercase tracking-widest ${step >= idx + 1 ? "text-[#238B57]" : "text-slate-400"}`}
@@ -113,6 +297,8 @@ export default function RegisterMosqueFlow() {
                   <input
                     type="text"
                     placeholder="Enter mosque name"
+                    value={formData.mosqueName}
+                    onChange={handleChange("mosqueName")}
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#238B57]/10 focus:border-[#238B57] transition-all"
                   />
                 </div>
@@ -123,6 +309,8 @@ export default function RegisterMosqueFlow() {
                   <input
                     type="text"
                     placeholder="+880 16XXXXXXXX"
+                    value={formData.phone}
+                    onChange={handleChange("phone")}
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#238B57]/10 focus:border-[#238B57] transition-all"
                   />
                 </div>
@@ -133,6 +321,8 @@ export default function RegisterMosqueFlow() {
                   <input
                     type="text"
                     placeholder="Your name"
+                    value={formData.contactPerson}
+                    onChange={handleChange("contactPerson")}
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#238B57]/10 focus:border-[#238B57] transition-all"
                   />
                 </div>
@@ -143,6 +333,8 @@ export default function RegisterMosqueFlow() {
                   <input
                     type="email"
                     placeholder="mosque@example.com"
+                    value={formData.email}
+                    onChange={handleChange("email")}
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#238B57]/10 focus:border-[#238B57] transition-all"
                   />
                 </div>
@@ -175,6 +367,8 @@ export default function RegisterMosqueFlow() {
                   <input
                     type="text"
                     placeholder="Street address, building name, etc."
+                    value={formData.address}
+                    onChange={handleChange("address")}
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-[#238B57]"
                   />
                 </div>
@@ -185,6 +379,8 @@ export default function RegisterMosqueFlow() {
                   <input
                     type="text"
                     placeholder="e.g., Uttara, Gulshan, Mohammadpur"
+                    value={formData.area}
+                    onChange={handleChange("area")}
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:border-[#238B57]"
                   />
                 </div>
@@ -243,15 +439,17 @@ export default function RegisterMosqueFlow() {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {PRAYERS.map((prayer) => (
-                      <tr key={prayer}>
+                      <tr key={prayer.label}>
                         <td className="px-6 py-5 font-bold text-slate-700 text-sm">
-                          {prayer}
+                          {prayer.label}
                         </td>
                         <td className="px-6 py-5">
                           <input
                             type="time"
                             step="60"
                             placeholder="00:00 AM"
+                            value={formData.prayerTimes[prayer.beginningKey]}
+                            onChange={handlePrayerTimeChange(prayer.beginningKey)}
                             className="w-full text-sm bg-transparent border-b border-slate-100 focus:border-[#238B57] focus:outline-none pb-1"
                           />
                         </td>
@@ -260,6 +458,17 @@ export default function RegisterMosqueFlow() {
                             type="time"
                             step="60"
                             placeholder="00:00 AM"
+                            value={
+                              prayer.jamaahKey
+                                ? formData.prayerTimes[prayer.jamaahKey]
+                                : ""
+                            }
+                            onChange={
+                              prayer.jamaahKey
+                                ? handlePrayerTimeChange(prayer.jamaahKey)
+                                : undefined
+                            }
+                            disabled={!prayer.jamaahKey}
                             className="w-full text-sm bg-transparent border-b border-slate-100 focus:border-[#238B57] focus:outline-none pb-1"
                           />
                         </td>
@@ -304,10 +513,16 @@ export default function RegisterMosqueFlow() {
                   {FACILITIES.map((facility) => (
                     <div
                       key={facility.id}
-                      className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-transparent transition-all group cursor-pointer"
+                      onClick={() => toggleFacility(facility.id)}
+                      className={`flex items-center gap-3 p-4 bg-slate-50 rounded-xl border transition-all group cursor-pointer ${formData.facilities.includes(facility.id)
+                          ? "border-[#238B57] bg-[#E8F5EE]"
+                          : "border-transparent"
+                        }`}
                     >
                       <div className="w-5 h-5 rounded border-2 border-slate-200 bg-white flex items-center justify-center group-hover:border-[#238B57]">
-                        {/* Hidden checkbox logic here */}
+                        {formData.facilities.includes(facility.id) && (
+                          <Check size={14} className="text-[#238B57]" />
+                        )}
                       </div>
                       <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900">
                         {facility.label}
@@ -324,6 +539,8 @@ export default function RegisterMosqueFlow() {
                 <textarea
                   rows={4}
                   placeholder="Any other details about your mosque (capacity, special programs, etc.)"
+                  value={formData.additionalInfo}
+                  onChange={handleChange("additionalInfo")}
                   className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-[#238B57] outline-none transition-all"
                 />
               </div>
@@ -352,12 +569,19 @@ export default function RegisterMosqueFlow() {
                   Back
                 </button>
                 <button
-                  onClick={nextStep}
+                  onClick={handleSubmitToWhatsApp}
+                  disabled={isSubmitting}
                   className="flex-[2] py-4 bg-[#238B57] text-white font-bold rounded-xl flex items-center justify-center gap-2"
                 >
-                  Continue to WhatsApp <Send size={18} />
+                  {isSubmitting ? "Submitting..." : "Continue to WhatsApp"} <Send size={18} />
                 </button>
               </div>
+
+              {submissionError && (
+                <p className="mt-4 text-sm text-red-500 text-center">
+                  {submissionError}
+                </p>
+              )}
             </div>
           )}
 

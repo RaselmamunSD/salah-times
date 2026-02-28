@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Star, MapPin, ArrowRight, User, LogOut } from "lucide-react";
-import Image from "next/image";
 import { ProtectedRoute } from "../components/ProtectedRoute";
 import { useAuth } from "../providers/AuthProvider";
 
@@ -22,6 +21,20 @@ const DashboardHome = () => {
   const userName = user
     ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username || user.email
     : "User";
+
+  const getAbsoluteImageUrl = (url) => {
+    if (!url || url === "null" || url === "undefined") return null;
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+
+    const baseUrl =
+      typeof window !== "undefined"
+        ? process.env.NEXT_PUBLIC_API_URL || window.location.origin
+        : process.env.NEXT_PUBLIC_API_URL || "";
+
+    return `${baseUrl}${url}`;
+  };
+
+  const profileImageUrl = getAbsoluteImageUrl(user?.profile_image);
 
   return (
     <div className="max-w-6xl mx-auto p-8 bg-[#F8F9FA] min-h-screen text-slate-800">
@@ -97,11 +110,9 @@ const DashboardHome = () => {
         <div className="bg-white p-6 rounded-2xl shadow-[0_2px_15px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col h-full">
           <div className="flex items-start gap-4 mb-4">
             <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100">
-              {user?.profile_image ? (
-                <Image
-                  width={48}
-                  height={48}
-                  src={user.profile_image}
+              {profileImageUrl ? (
+                <img
+                  src={profileImageUrl}
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />

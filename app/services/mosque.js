@@ -347,7 +347,7 @@ export const mosqueService = {
      */
     getNearby: async (lat, lng, radius = 10) => {
         const response = await mosqueAxios.get("/api/mosques/nearby/", {
-            params: { lat, lng, radius }
+            params: { latitude: lat, longitude: lng, radius }
         });
         return response.data;
     },
@@ -378,6 +378,26 @@ export const mosqueService = {
      */
     getFavorites: async () => {
         const response = await mosqueAxios.get("/api/mosques/favorites/");
+        return response.data;
+    },
+
+    /**
+     * Get prayer times for a specific mosque
+     * @param {number} mosqueId - Mosque ID
+     * @returns {Promise}
+     */
+    getPrayerTimes: async (mosqueId) => {
+        const response = await mosqueAxios.get(`/api/mosques/${mosqueId}/prayer_times/`);
+        return response.data;
+    },
+
+    /**
+     * Submit mosque registration request
+     * @param {Object} payload - Registration payload
+     * @returns {Promise}
+     */
+    registerMosqueRequest: async (payload) => {
+        const response = await mosqueAxios.post("/api/mosques/register/", payload);
         return response.data;
     },
 };

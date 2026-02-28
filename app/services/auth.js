@@ -159,7 +159,7 @@ export const authService = {
     refreshToken: async () => {
         const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY) || Cookies.get(REFRESH_TOKEN_KEY);
 
-        const response = await axios.post(`${API_URL}/api/auth/login/`, {
+        const response = await axios.post(`${API_URL}/api/auth/refresh_token/`, {
             refresh: refreshToken
         });
 
@@ -175,15 +175,37 @@ export const authService = {
     },
 
     /**
+     * Request password reset email
+     * @param {string} email
+     * @returns {Promise<Object>}
+     */
+    requestPasswordReset: async (email) => {
+        const response = await authAxios.post("/api/auth/forgot_password/", { email });
+        return response.data;
+    },
+
+    /**
+     * Reset password using token
+     * @param {Object} data - { uid, token, new_password, new_password_confirm }
+     * @returns {Promise<Object>}
+     */
+    resetPassword: async (data) => {
+        const response = await authAxios.post("/api/auth/reset_password/", data);
+        return response.data;
+    },
+
+    /**
      * Change user password
      * @param {string} oldPassword
      * @param {string} newPassword
+     * @param {string} newPasswordConfirm
      * @returns {Promise}
      */
-    changePassword: async (oldPassword, newPassword) => {
+    changePassword: async (oldPassword, newPassword, newPasswordConfirm) => {
         const response = await authAxios.post("/api/auth/change_password/", {
             old_password: oldPassword,
-            new_password: newPassword
+            new_password: newPassword,
+            new_password_confirm: newPasswordConfirm
         });
         return response.data;
     },

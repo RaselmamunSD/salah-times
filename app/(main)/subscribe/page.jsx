@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Check,
   Search,
@@ -13,6 +13,8 @@ import {
   Bell,
 } from "lucide-react";
 import { Inter, Lato } from "next/font/google";
+import subscriptionService from "@/app/services/subscriptions";
+import { mosqueService } from "@/app/services/mosque";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,12 +24,6 @@ const lato = Lato({
   weight: ["400"],
 });
 
-// Mock Data
-const MOSQUES = [
-  { id: 1, name: "Baitul Mukarram National Mosque", address: "Dhaka • 2.3 km" },
-  { id: 2, name: "Gulshan Central Mosque", address: "Gulshan • 3.1 km" },
-  { id: 3, name: "Mohammedpur Shia Mosque", address: "Mohammedpur • 5.0 km" },
-];
 const DURATION_OPTIONS = [
   { label: "7", sub: "Days", value: 7 },
   { label: "15", sub: "Days", value: 15 },
@@ -45,15 +41,64 @@ const PRAYER_LIST = [
 export default function SubscriptionFlow() {
   const [step, setStep] = useState(1);
   const [method, setMethod] = useState("whatsapp");
-  const [selectedMosques, setSelectedMosques] = useState([1]);
+  const [email, setEmail] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [selectedMosques, setSelectedMosques] = useState([]);
   const [duration, setDuration] = useState(30);
   const [reminderOffset, setReminderOffset] = useState("10");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedPrayers, setSelectedPrayers] = useState(
     PRAYER_LIST.map((p) => p.id),
   );
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
+  const [apiSuccess, setApiSuccess] = useState("");
+  const [mosques, setMosques] = useState([]);
+  const [mosquesLoading, setMosquesLoading] = useState(false);
+  const [mosqueSearch, setMosqueSearch] = useState("");
 
   const isAllSelected = selectedPrayers.length === PRAYER_LIST.length;
+
+  useEffect(() => {
+    const fetchMosques = async () => {
+      setMosquesLoading(true);
+      try {
+        const response = await mosqueService.list({ is_active: true });
+        const mosqueList = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.results)
+            ? response.results
+            : [];
+
+        setMosques(mosqueList);
+
+        if (mosqueList.length > 0) {
+          const firstMosqueId = mosqueList[0]?.id;
+          if (firstMosqueId && selectedMosques.length === 0) {
+            setSelectedMosques([firstMosqueId]);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load mosques:", error);
+      } finally {
+        setMosquesLoading(false);
+      }
+    };
+
+    fetchMosques();
+  }, []);
+
+  const filteredMosques = useMemo(() => {
+    const search = mosqueSearch.trim().toLowerCase();
+    if (!search) return mosques;
+
+    return mosques.filter((mosque) => {
+      const name = mosque?.name?.toLowerCase() || "";
+      const address = mosque?.address?.toLowerCase() || "";
+      const city = mosque?.city_name?.toLowerCase() || "";
+      return name.includes(search) || address.includes(search) || city.includes(search);
+    });
+  }, [mosques, mosqueSearch]);
 
   const getEndDate = () => {
     const date = new Date();
@@ -82,8 +127,86 @@ export default function SubscriptionFlow() {
     );
   };
 
-  const nextStep = () => setStep((prev) => Math.min(prev + 1, 4));
+  const nextStep = () => {
+    if (step === 2 && selectedMosques.length === 0) {
+      setApiError("Please select at least one mosque.");
+      return;
+    }
+    setApiError("");
+    setStep((prev) => Math.min(prev + 1, 4));
+  };
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
+
+  const handleMethodContinue = () => {
+    setApiError("");
+
+    if (method === "email") {
+      if (!email) {
+        setApiError("Please enter your email address.");
+        return;
+      }
+    } else if (method === "whatsapp") {
+      if (!whatsappNumber) {
+        setApiError("Please enter your WhatsApp number.");
+        return;
+      }
+    }
+
+    nextStep();
+  };
+
+  const handleCompleteSubscription = async () => {
+    setApiError("");
+    setApiSuccess("");
+    setApiLoading(true);
+
+    try {
+      // Validate email is provided
+      if (!email) {
+        setApiError("Please provide an email address.");
+        setApiLoading(false);
+        return;
+      }
+
+      if (selectedMosques.length === 0) {
+        setApiError("Please select at least one mosque.");
+        setApiLoading(false);
+        return;
+      }
+
+      if (selectedPrayers.length === 0) {
+        setApiError("Please select at least one prayer time.");
+        setApiLoading(false);
+        return;
+      }
+
+      const payload = {
+        email,
+        phone: whatsappNumber,
+        notification_method: method,
+        subscription_type: "daily",
+        selected_mosques: selectedMosques,
+        duration_days: duration,
+        notification_minutes_before: Number(reminderOffset),
+        selected_prayers: selectedPrayers,
+      };
+
+      await subscriptionService.create(payload);
+
+      setApiSuccess("You have been subscribed successfully.");
+      setStep(4);
+    } catch (error) {
+      console.error("Subscription error:", error);
+      const detail =
+        error.response?.data?.detail ||
+        (typeof error.response?.data === "object"
+          ? Object.values(error.response.data).flat().join(", ")
+          : "Failed to create subscription. Please try again.");
+      setApiError(detail);
+    } finally {
+      setApiLoading(false);
+    }
+  };
 
   return (
     <>
@@ -110,7 +233,7 @@ export default function SubscriptionFlow() {
                 >
                   {step > 1 ?
                     <Check size={16} />
-                  : "1"}
+                    : "1"}
                 </div>
                 <span className="text-xs font-medium mt-2 text-slate-500">
                   Method
@@ -126,7 +249,7 @@ export default function SubscriptionFlow() {
                 >
                   {step > 2 ?
                     <Check size={16} />
-                  : "2"}
+                    : "2"}
                 </div>
                 <span className="text-xs font-medium mt-2 text-slate-500">
                   Mosques
@@ -191,25 +314,55 @@ export default function SubscriptionFlow() {
                 </div>
               </div>
 
-              <div className="space-y-2 mb-8">
-                <label className="text-sm font-bold text-slate-700">
-                  {method === "whatsapp" ? "WhatsApp Number" : "Email Address"}{" "}
-                  *
-                </label>
-                <input
-                  required
-                  type={method === "whatsapp" ? "tel" : "email"}
-                  placeholder={
-                    method === "whatsapp" ? "+880 1XXX-XXXXXX" : (
-                      "your.email@example.com"
-                    )
-                  }
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#238B57] focus:border-[#238B57] transition-all"
-                />
+              {/* Contact Inputs */}
+              <div className="space-y-4 mb-8">
+                {method === "whatsapp" && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">
+                      WhatsApp Number *
+                    </label>
+                    <input
+                      required
+                      type="tel"
+                      placeholder="+880 1XXX-XXXXXX"
+                      value={whatsappNumber}
+                      onChange={(e) => setWhatsappNumber(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#238B57] focus:border-[#238B57] transition-all"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Format: +880 1XXX-XXXXXX (Example: +880 1711223344)
+                    </p>
+                  </div>
+                )}
+
+                {method === "email" && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700">
+                      Email Address *
+                    </label>
+                    <input
+                      required
+                      type="email"
+                      placeholder="your.email@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#238B57] focus:border-[#238B57] transition-all"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      We'll send daily prayer schedules to this email
+                    </p>
+                  </div>
+                )}
               </div>
 
+              {apiError && (
+                <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg text-xs text-left">
+                  {apiError}
+                </div>
+              )}
+
               <button
-                onClick={nextStep}
+                onClick={handleMethodContinue}
                 className="w-full bg-[#238B57] hover:bg-[#1a6e44] text-white font-bold rounded-xl py-4 text-sm transition-colors shadow-sm"
               >
                 Continue
@@ -236,6 +389,8 @@ export default function SubscriptionFlow() {
                   <input
                     type="text"
                     placeholder="Search mosques..."
+                    value={mosqueSearch}
+                    onChange={(e) => setMosqueSearch(e.target.value)}
                     className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-[#238B57]"
                   />
                 </div>
@@ -248,7 +403,19 @@ export default function SubscriptionFlow() {
               </div>
 
               <div className="space-y-3 mb-8">
-                {MOSQUES.map((mosque) => (
+                {mosquesLoading && (
+                  <div className="text-sm text-slate-500 text-center py-6">
+                    Loading mosques...
+                  </div>
+                )}
+
+                {!mosquesLoading && filteredMosques.length === 0 && (
+                  <div className="text-sm text-slate-500 text-center py-6 border border-dashed border-gray-200 rounded-xl">
+                    No mosque found.
+                  </div>
+                )}
+
+                {!mosquesLoading && filteredMosques.map((mosque) => (
                   <div
                     key={mosque.id}
                     onClick={() => toggleMosque(mosque.id)}
@@ -263,6 +430,7 @@ export default function SubscriptionFlow() {
                           {mosque.name}
                         </h3>
                         <p className="text-xs text-slate-500 mt-0.5">
+                          {mosque.city_name ? `${mosque.city_name} • ` : ""}
                           {mosque.address}
                         </p>
                       </div>
@@ -304,6 +472,32 @@ export default function SubscriptionFlow() {
               <p className="text-sm text-slate-500 mb-8">
                 Select which prayers you want notifications for
               </p>
+
+              {apiError && (
+                <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg text-xs text-left">
+                  {apiError}
+                </div>
+              )}
+
+              {/* Email Field for WhatsApp Users */}
+              {method === "whatsapp" && !email && (
+                <div className="bg-blue-50 border border-blue-300 rounded-xl p-5 mb-8">
+                  <label className="text-sm font-bold text-slate-800 block mb-2">
+                    Email Address *
+                  </label>
+                  <input
+                    required
+                    type="email"
+                    placeholder="your.email@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-500 transition-all bg-white"
+                  />
+                  <p className="text-xs text-slate-600 mt-2">
+                    For subscription confirmation and backup notifications
+                  </p>
+                </div>
+              )}
 
               {/* Notification Duration Section */}
               <div className="bg-[#F6FBF9] border border-[#E8F5EE] rounded-2xl p-5 mb-8">
@@ -347,11 +541,10 @@ export default function SubscriptionFlow() {
                                 setReminderOffset(val);
                                 setIsDropdownOpen(false);
                               }}
-                              className={`flex items-center justify-between px-4 py-3 text-sm cursor-pointer transition-colors ${
-                                reminderOffset === val ?
-                                  "bg-[#F2F9F5] text-[#238B57] font-bold"
+                              className={`flex items-center justify-between px-4 py-3 text-sm cursor-pointer transition-colors ${reminderOffset === val ?
+                                "bg-[#F2F9F5] text-[#238B57] font-bold"
                                 : "text-slate-600 hover:bg-gray-50"
-                              }`}
+                                }`}
                             >
                               <span>{val} minutes early</span>
                               {reminderOffset === val && (
@@ -459,10 +652,17 @@ export default function SubscriptionFlow() {
                   Back
                 </button>
                 <button
-                  onClick={nextStep}
-                  className="flex-[2] bg-[#238B57] hover:bg-[#1a6e44] text-white font-bold rounded-xl py-4 text-sm transition-all shadow-md flex items-center justify-center gap-2"
+                  onClick={handleCompleteSubscription}
+                  disabled={apiLoading}
+                  className="flex-[2] bg-[#238B57] hover:bg-[#1a6e44] text-white font-bold rounded-xl py-4 text-sm transition-all shadow-md flex items-center justify-center gap-2 disabled:bg-[#238B57]/60 disabled:cursor-not-allowed"
                 >
-                  Complete Subscription <Check size={18} />
+                  {apiLoading ? (
+                    <>Processing...</>
+                  ) : (
+                    <>
+                      Complete Subscription <Check size={18} />
+                    </>
+                  )}
                 </button>
               </div>
             </div>

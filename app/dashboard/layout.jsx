@@ -66,6 +66,20 @@ function DashboardLayoutContent({ children }) {
     .toUpperCase()
     .slice(0, 2);
 
+  const getAbsoluteImageUrl = (url) => {
+    if (!url || url === "null" || url === "undefined") return null;
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+
+    const baseUrl =
+      typeof window !== "undefined"
+        ? process.env.NEXT_PUBLIC_API_URL || window.location.origin
+        : process.env.NEXT_PUBLIC_API_URL || "";
+
+    return `${baseUrl}${url}`;
+  };
+
+  const profileImageUrl = getAbsoluteImageUrl(user?.profile_image);
+
   return (
     <>
       <div className="bg-[#F8F9FA] flex text-slate-700">
@@ -170,9 +184,9 @@ function DashboardLayoutContent({ children }) {
                 <p className="text-xs text-slate-500">Welcome back!</p>
               </div>
               <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#1b9c5e] cursor-pointer shadow-sm bg-[#1b9c5e] flex items-center justify-center">
-                {user?.profile_image ? (
+                {profileImageUrl ? (
                   <img
-                    src={user.profile_image}
+                    src={profileImageUrl}
                     alt={userName}
                     className="w-full h-full object-cover"
                   />

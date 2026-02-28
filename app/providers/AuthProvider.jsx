@@ -24,7 +24,11 @@ export const AuthProvider = ({ children }) => {
                     setUser(response.data);
                     setIsAuthenticated(true);
                 } catch (error) {
-                    console.error("Failed to fetch user:", error);
+                    // 401 is expected when token is invalid/expired - don't log as error
+                    // Only log unexpected errors (network errors, 500s, etc.)
+                    if (error.response?.status !== 401) {
+                        console.error("Failed to fetch user:", error);
+                    }
                     // Token might be invalid, clear it
                     localStorage.removeItem(ACCESS_TOKEN_KEY);
                     localStorage.removeItem(REFRESH_TOKEN_KEY);
@@ -32,6 +36,9 @@ export const AuthProvider = ({ children }) => {
                     Cookies.remove(REFRESH_TOKEN_KEY);
                     setIsAuthenticated(false);
                 }
+            } else {
+                // No token found - user is not logged in (expected)
+                setIsAuthenticated(false);
             }
 
             setLoading(false);
@@ -146,18 +153,29 @@ export const AuthProvider = ({ children }) => {
     }, [axios]);
 
     // Change password
-    const changePassword = useCallback(async (oldPassword, newPassword) => {
+    const changePassword = useCallback(async (oldPassword, newPassword, newPasswordConfirm) => {
         try {
-            const response = await axios.post("/api/auth/change_password/", {
+            await axios.post("/api/auth/change_password/", {
                 old_password: oldPassword,
-                new_password: newPassword
+                new_password: newPassword,
+                new_password_confirm: newPasswordConfirm
             });
             return { success: true };
         } catch (error) {
             console.error("Password change failed:", error);
+            const apiError = error.response?.data;
+            const normalizedError =
+                apiError?.old_password ||
+                apiError?.new_password ||
+                apiError?.new_password_confirm ||
+                apiError?.detail ||
+                apiError;
+
             return {
                 success: false,
-                error: error.response?.data?.old_password?.[0] || "Password change failed."
+                error: Array.isArray(normalizedError)
+                    ? normalizedError[0]
+                    : normalizedError || "Password change failed."
             };
         }
     }, [axios]);

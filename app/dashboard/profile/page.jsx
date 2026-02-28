@@ -16,10 +16,28 @@ export default function UserProfile() {
   const [currentImage, setCurrentImage] = useState(null);
   const fileInputRef = useRef(null);
 
+  // Helper to ensure we always have an absolute URL for images
+  const getAbsoluteImageUrl = (url) => {
+    if (!url) return null;
+
+    // If backend already returned a full URL, just use it
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return url;
+    }
+
+    // Otherwise, prefix with API base URL so Next.js can load the image correctly
+    const baseUrl =
+      typeof window !== "undefined"
+        ? process.env.NEXT_PUBLIC_API_URL || window.location.origin
+        : process.env.NEXT_PUBLIC_API_URL || "";
+
+    return `${baseUrl}${url}`;
+  };
+
   // Set current image from user context when available
   useEffect(() => {
     if (user?.profile_image) {
-      setCurrentImage(user.profile_image);
+      setCurrentImage(getAbsoluteImageUrl(user.profile_image));
     }
   }, [user]);
 
