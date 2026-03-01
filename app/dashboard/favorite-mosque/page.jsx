@@ -1,24 +1,54 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { MapPin, Trash2 } from "lucide-react";
-
-const mosques = [
-  {
-    id: 1,
-    name: "Baitul Mukarram National Mosque",
-    location: "Dhaka • 2.3 km",
-    image: "🕌", // Placeholder for the mosque icon
-  },
-  {
-    id: 2,
-    name: "Gulshan Central Mosque",
-    location: "Gulshan • 3.1 km",
-    image: "🕌", // Placeholder for the mosque icon
-  },
-];
+import { useRouter } from "next/navigation";
+import { mosqueService } from "../../services/mosque";
 
 export default function FavoriteMosques() {
+  const router = useRouter();
+  const [mosques, setMosques] = useState([]);
+
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      try {
+        const response = await mosqueService.getFavorites();
+        const favorites = Array.isArray(response) ? response : [];
+
+        const mapped = favorites
+          .map((favorite) => {
+            const mosque = favorite?.mosque;
+            if (!mosque) return null;
+
+            return {
+              id: mosque.id,
+              name: mosque.name,
+              location: mosque.city_name
+                ? `${mosque.city_name} • ${mosque.address || ""}`
+                : mosque.address || "Dhaka",
+            };
+          })
+          .filter(Boolean);
+
+        setMosques(mapped);
+      } catch (error) {
+        console.error("Failed to load favorite mosques:", error);
+        setMosques([]);
+      }
+    };
+
+    fetchFavorites();
+  }, []);
+
+  const handleRemoveFavorite = async (mosqueId) => {
+    try {
+      await mosqueService.removeFavorite(mosqueId);
+      setMosques((prev) => prev.filter((mosque) => mosque.id !== mosqueId));
+    } catch (error) {
+      console.error("Failed to remove favorite mosque:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] md:p-12 text-slate-800">
       {/* Header Section */}
@@ -58,11 +88,15 @@ export default function FavoriteMosques() {
 
             {/* Right side: Actions */}
             <div className="flex items-center gap-3">
-              <button className="bg-[#E9F3EE] text-[#238B57] px-5 py-2 rounded-lg text-[13px] font-bold hover:bg-[#dcece4] transition-colors">
+              <button
+                onClick={() => router.push(`/mosques/${mosque.id}`)}
+                className="bg-[#E9F3EE] text-[#238B57] px-5 py-2 rounded-lg text-[13px] font-bold hover:bg-[#dcece4] transition-colors"
+              >
                 View Details
               </button>
 
               <button
+                onClick={() => handleRemoveFavorite(mosque.id)}
                 className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
                 title="Remove from favorites"
               >
@@ -71,6 +105,12 @@ export default function FavoriteMosques() {
             </div>
           </div>
         ))}
+
+        {mosques.length === 0 && (
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 text-sm text-slate-500">
+            No favorite mosques yet.
+          </div>
+        )}
       </div>
     </div>
   );

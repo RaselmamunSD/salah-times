@@ -4,12 +4,14 @@ import { Mail } from "lucide-react";
 import Link from "next/link";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { FaArrowLeft } from "react-icons/fa6";
 import authService from "@/app/services/auth";
 
 const ForgotPassword = () => {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState(searchParams.get("email") || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -21,17 +23,27 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      await authService.requestPasswordReset(email);
+      const response = await authService.requestPasswordReset(email);
+
+      if (response?.email_sent === false) {
+        setError(
+          response?.debug_error ||
+          "Email পাঠানো যায়নি। SMTP/Gmail App Password ঠিক করে আবার চেষ্টা করুন।"
+        );
+        return;
+      }
+
       setSuccess("If an account exists with this email, a reset link has been sent.");
       // Redirect to check-mail page after a short delay
       setTimeout(() => {
-        router.push("/check-mail");
+        const params = new URLSearchParams({ email });
+        router.push(`/check-mail?${params.toString()}`);
       }, 800);
     } catch (err) {
       console.error("Forgot password error:", err);
       setError(
         err.response?.data?.detail ||
-          "Failed to send reset link. Please try again."
+        "Failed to send reset link. Please try again."
       );
     } finally {
       setLoading(false);
@@ -47,7 +59,7 @@ const ForgotPassword = () => {
             Forgot Password?
           </h1>
           <p className="mt-2 text-gray-500">
-            Enter your email address and we'll send you a reset link.
+            Enter your email address and we&apos;ll send you a reset link.
           </p>
         </div>
 
@@ -81,7 +93,7 @@ const ForgotPassword = () => {
                 name="email"
                 type="email"
                 required
-                placeholder="your.email@example.com"
+                placeholder="rasel.mamun314@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1b9c5e] focus:border-[#1b9c5e] outline-none transition-colors sm:text-sm placeholder:text-gray-400"

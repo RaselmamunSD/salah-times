@@ -1,8 +1,104 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useAxios } from "../../providers/AxiosProvider";
+import { useAuth } from "../../providers/AuthProvider";
+import authService from "../../services/auth";
 
 export default function AccountSettings() {
+  const axios = useAxios();
+  const { logout } = useAuth();
+  const [prayerNotifications, setPrayerNotifications] = useState(true);
+  const [mosqueUpdates, setMosqueUpdates] = useState(true);
+  const [locationServices, setLocationServices] = useState(true);
+  const [savingPrayer, setSavingPrayer] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await axios.get("/api/users/profile/me/");
+        const profile = response.data;
+        const prayerEnabled =
+          profile.fajr_notification ||
+          profile.dhuhr_notification ||
+          profile.asr_notification ||
+          profile.maghrib_notification ||
+          profile.isha_notification;
+
+        setPrayerNotifications(Boolean(prayerEnabled));
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+      }
+
+      const savedMosqueUpdates = localStorage.getItem("mosque_updates_enabled");
+      if (savedMosqueUpdates !== null) {
+        setMosqueUpdates(savedMosqueUpdates === "true");
+      }
+
+      const savedLocationServices = localStorage.getItem("location_services_enabled");
+      if (savedLocationServices !== null) {
+        setLocationServices(savedLocationServices === "true");
+      }
+    };
+
+    loadSettings();
+  }, [axios]);
+
+  const handlePrayerToggle = async () => {
+    const nextValue = !prayerNotifications;
+    setPrayerNotifications(nextValue);
+    setSavingPrayer(true);
+
+    try {
+      await axios.post("/api/users/profile/update_preferences/", {
+        fajr_notification: nextValue,
+        dhuhr_notification: nextValue,
+        asr_notification: nextValue,
+        maghrib_notification: nextValue,
+        isha_notification: nextValue,
+      });
+    } catch (error) {
+      console.error("Failed to save prayer notification settings:", error);
+      setPrayerNotifications(!nextValue);
+      alert("Failed to update prayer notification settings.");
+    } finally {
+      setSavingPrayer(false);
+    }
+  };
+
+  const handleMosqueUpdatesToggle = () => {
+    const nextValue = !mosqueUpdates;
+    setMosqueUpdates(nextValue);
+    localStorage.setItem("mosque_updates_enabled", String(nextValue));
+  };
+
+  const handleLocationServicesToggle = () => {
+    const nextValue = !locationServices;
+    setLocationServices(nextValue);
+    localStorage.setItem("location_services_enabled", String(nextValue));
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete your account? This action cannot be undone."
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await authService.deleteAccount();
+      await logout();
+    } catch (error) {
+      console.error("Delete account failed:", error);
+      alert("Failed to delete account. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] p-6 md:p-12">
       {/* Header Section */}
@@ -32,8 +128,13 @@ export default function AccountSettings() {
                   Receive notifications for prayer times
                 </p>
               </div>
-              {/* Checkbox Placeholder to match the image */}
-              <input type="checkbox" className="checkbox" />
+              <input
+                type="checkbox"
+                className="checkbox"
+                checked={prayerNotifications}
+                onChange={handlePrayerToggle}
+                disabled={savingPrayer}
+              />
             </div>
 
             {/* Item 2 */}
@@ -46,8 +147,12 @@ export default function AccountSettings() {
                   Get updates from your favorite mosques
                 </p>
               </div>
-              {/* Checkbox Placeholder */}
-              <input type="checkbox" className="checkbox" />
+              <input
+                type="checkbox"
+                className="checkbox"
+                checked={mosqueUpdates}
+                onChange={handleMosqueUpdatesToggle}
+              />
             </div>
           </div>
         </div>
@@ -67,8 +172,12 @@ export default function AccountSettings() {
                 Allow app to access your location
               </p>
             </div>
-            {/* Checkbox Placeholder */}
-            <input type="checkbox" className="checkbox" />
+            <input
+              type="checkbox"
+              className="checkbox"
+              checked={locationServices}
+              onChange={handleLocationServicesToggle}
+            />
           </div>
         </div>
 
@@ -79,8 +188,12 @@ export default function AccountSettings() {
             Once you delete your account, there is no going back. Please be
             certain.
           </p>
-          <button className="bg-[#E50000] hover:bg-red-700 text-white font-medium text-sm px-6 py-2.5 rounded-lg transition-colors shadow-sm">
-            Delete Account
+          <button
+            onClick={handleDeleteAccount}
+            disabled={deleting}
+            className="bg-[#E50000] hover:bg-red-700 text-white font-medium text-sm px-6 py-2.5 rounded-lg transition-colors shadow-sm"
+          >
+            {deleting ? "Deleting..." : "Delete Account"}
           </button>
         </div>
       </div>

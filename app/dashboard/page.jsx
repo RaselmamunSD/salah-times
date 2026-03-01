@@ -1,12 +1,14 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { Star, MapPin, ArrowRight, User, LogOut } from "lucide-react";
 import { ProtectedRoute } from "../components/ProtectedRoute";
 import { useAuth } from "../providers/AuthProvider";
 
 const DashboardHome = () => {
   const { user, logout, isAuthenticated } = useAuth();
+  const router = useRouter();
 
   const prayerTimes = [
     { name: "Fajr", time: "05:45 AM" },
@@ -76,7 +78,10 @@ const DashboardHome = () => {
               </div>
             </div>
           </div>
-          <button className="mt-auto flex items-center gap-1 text-[13px] font-semibold text-[#C9A24D] hover:opacity-80 transition-opacity">
+          <button
+            onClick={() => router.push("/dashboard/favorite-mosque")}
+            className="mt-auto flex items-center gap-1 text-[13px] font-semibold text-[#C9A24D] hover:opacity-80 transition-opacity"
+          >
             View all <ArrowRight size={14} />
           </button>
         </div>
@@ -101,7 +106,10 @@ const DashboardHome = () => {
               </div>
             </div>
           </div>
-          <button className="mt-auto flex items-center gap-1 text-[13px] font-semibold text-[#1F6F8B] hover:opacity-80 transition-opacity">
+          <button
+            onClick={() => router.push("/dashboard/location")}
+            className="mt-auto flex items-center gap-1 text-[13px] font-semibold text-[#1F6F8B] hover:opacity-80 transition-opacity"
+          >
             Update location <ArrowRight size={14} />
           </button>
         </div>
@@ -131,7 +139,10 @@ const DashboardHome = () => {
               </div>
             </div>
           </div>
-          <button className="mt-auto flex items-center gap-1 text-[13px] font-semibold text-[#238B57] hover:opacity-80 transition-opacity">
+          <button
+            onClick={() => router.push("/dashboard/profile")}
+            className="mt-auto flex items-center gap-1 text-[13px] font-semibold text-[#238B57] hover:opacity-80 transition-opacity"
+          >
             Edit profile <ArrowRight size={14} />
           </button>
         </div>

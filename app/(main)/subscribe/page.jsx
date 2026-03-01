@@ -479,26 +479,6 @@ export default function SubscriptionFlow() {
                 </div>
               )}
 
-              {/* Email Field for WhatsApp Users */}
-              {method === "whatsapp" && !email && (
-                <div className="bg-blue-50 border border-blue-300 rounded-xl p-5 mb-8">
-                  <label className="text-sm font-bold text-slate-800 block mb-2">
-                    Email Address *
-                  </label>
-                  <input
-                    required
-                    type="email"
-                    placeholder="your.email@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-500 transition-all bg-white"
-                  />
-                  <p className="text-xs text-slate-600 mt-2">
-                    For subscription confirmation and backup notifications
-                  </p>
-                </div>
-              )}
-
               {/* Notification Duration Section */}
               <div className="bg-[#F6FBF9] border border-[#E8F5EE] rounded-2xl p-5 mb-8">
                 <div className="flex items-center justify-between mb-4">

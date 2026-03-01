@@ -1,6 +1,65 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 
 export default function SupportSection() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState("");
+
+  const handleInputChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitError("");
+    setSubmitSuccess("");
+
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      setSubmitError("Please fill in all required fields.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+      const response = await fetch(`${apiBase}/api/support-messages/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const firstError =
+          (typeof errorData === "object" && Object.values(errorData)[0]) ||
+          "Failed to send message.";
+        throw new Error(Array.isArray(firstError) ? firstError[0] : firstError);
+      }
+
+      setSubmitSuccess("Your message has been sent successfully.");
+      setFormData({ name: "", email: "", subject: "", message: "" });
+    } catch (error) {
+      setSubmitError(error.message || "Failed to send message.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f9fafb] py-15 flex flex-col items-center px-4 sm:px-6 relative">
       {/* Top Contact Cards */}
@@ -168,7 +227,19 @@ export default function SupportSection() {
           </p>
         </div>
 
-        <form className="w-full flex flex-col gap-5">
+        {submitSuccess && (
+          <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+            {submitSuccess}
+          </div>
+        )}
+
+        {submitError && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+            {submitError}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="flex flex-col gap-1.5">
               <label className="text-[12px] font-bold text-slate-700">
@@ -177,6 +248,8 @@ export default function SupportSection() {
               <input
                 type="text"
                 placeholder="Enter your name"
+                value={formData.name}
+                onChange={(e) => handleInputChange("name", e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-3 text-[14px] text-slate-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#238B57] focus:border-[#238B57] transition-all"
               />
             </div>
@@ -187,6 +260,8 @@ export default function SupportSection() {
               <input
                 type="email"
                 placeholder="your@email.com"
+                value={formData.email}
+                onChange={(e) => handleInputChange("email", e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-3 text-[14px] text-slate-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#238B57] focus:border-[#238B57] transition-all"
               />
             </div>
@@ -198,6 +273,8 @@ export default function SupportSection() {
             </label>
             <input
               type="text"
+              value={formData.subject}
+              onChange={(e) => handleInputChange("subject", e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-4 py-3 text-[14px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#238B57] focus:border-[#238B57] transition-all"
             />
           </div>
@@ -209,12 +286,15 @@ export default function SupportSection() {
             <textarea
               placeholder="Tell us how we can help..."
               rows={5}
+              value={formData.message}
+              onChange={(e) => handleInputChange("message", e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-4 py-3 text-[14px] text-slate-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#238B57] focus:border-[#238B57] transition-all resize-none"
             ></textarea>
           </div>
 
           <button
             type="submit"
+            disabled={isSubmitting}
             className="w-full bg-[#208B55] hover:bg-[#1a7346] text-white font-semibold rounded-lg py-3.5 mt-2 flex items-center justify-center gap-2 transition-colors shadow-sm"
           >
             <svg
@@ -230,7 +310,7 @@ export default function SupportSection() {
               <line x1="22" y1="2" x2="11" y2="13"></line>
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             </svg>
-            Send Message
+            {isSubmitting ? "Sending..." : "Send Message"}
           </button>
         </form>
       </div>
