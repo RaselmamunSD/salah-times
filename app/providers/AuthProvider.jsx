@@ -11,41 +11,67 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isHydrated, setIsHydrated] = useState(false);
 
-    // Check if user is logged in on mount
+    // First effect: Mark as hydrated (runs only on client after mounting)
     useEffect(() => {
+        setIsHydrated(true);
+    }, []);
+
+    // Second effect: Check auth AFTER hydration
+    useEffect(() => {
+        if (!isHydrated) return;
+
         const checkAuth = async () => {
-            const token = localStorage.getItem(ACCESS_TOKEN_KEY) || Cookies.get(ACCESS_TOKEN_KEY);
+            try {
+                // Get token from localStorage and Cookies (safe now - we're on client)
+                let token = localStorage.getItem(ACCESS_TOKEN_KEY) || Cookies.get(ACCESS_TOKEN_KEY);
 
-            if (token) {
-                try {
-                    // Fetch current user
-                    const response = await axios.get("/api/auth/me/");
-                    setUser(response.data);
+                console.log("[AuthProvider] Token found:", !!token);
+
+                // If token exists, mark as authenticated immediately (optimistic)
+                if (token) {
                     setIsAuthenticated(true);
-                } catch (error) {
-                    // 401 is expected when token is invalid/expired - don't log as error
-                    // Only log unexpected errors (network errors, 500s, etc.)
-                    if (error.response?.status !== 401) {
-                        console.error("Failed to fetch user:", error);
-                    }
-                    // Token might be invalid, clear it
-                    localStorage.removeItem(ACCESS_TOKEN_KEY);
-                    localStorage.removeItem(REFRESH_TOKEN_KEY);
-                    Cookies.remove(ACCESS_TOKEN_KEY);
-                    Cookies.remove(REFRESH_TOKEN_KEY);
-                    setIsAuthenticated(false);
-                }
-            } else {
-                // No token found - user is not logged in (expected)
-                setIsAuthenticated(false);
-            }
+                    console.log("[AuthProvider] Set isAuthenticated to true");
 
-            setLoading(false);
+                    // Then verify token with API call
+                    try {
+                        const response = await axios.get("/api/auth/me/");
+                        console.log("[AuthProvider] API verification successful:", response.data);
+                        setUser(response.data);
+                    } catch (error) {
+                        console.log("[AuthProvider] API verification failed:", error.response?.status, error.message);
+
+                        // Token is invalid, clear it
+                        if (error.response?.status === 401) {
+                            console.log("[AuthProvider] 401 Error - clearing tokens");
+                            localStorage.removeItem(ACCESS_TOKEN_KEY);
+                            localStorage.removeItem(REFRESH_TOKEN_KEY);
+                            Cookies.remove(ACCESS_TOKEN_KEY);
+                            Cookies.remove(REFRESH_TOKEN_KEY);
+                            setIsAuthenticated(false);
+                            setUser(null);
+                        } else {
+                            // Other errors - keep auth state but log error
+                            console.error("[AuthProvider] Failed to fetch user:", error.message);
+                        }
+                    }
+                } else {
+                    // No token found - user is not logged in
+                    console.log("[AuthProvider] No token found - logging out");
+                    setIsAuthenticated(false);
+                    setUser(null);
+                }
+            } catch (error) {
+                console.error("[AuthProvider] Unexpected error in checkAuth:", error);
+                setIsAuthenticated(false);
+            } finally {
+                setLoading(false);
+            }
         };
 
         checkAuth();
-    }, [axios]);
+    }, [isHydrated, axios]);
 
     // Login function
     const login = useCallback(async (credentials) => {
@@ -53,7 +79,7 @@ export const AuthProvider = ({ children }) => {
             const response = await axios.post("/api/auth/login/", credentials);
             const { tokens, user: userData } = response.data;
 
-            // Store tokens
+            // Store tokens in localStorage
             localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access);
             localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh);
 
@@ -86,7 +112,7 @@ export const AuthProvider = ({ children }) => {
             const response = await axios.post("/api/auth/register/", userData);
             const { tokens, user: newUser } = response.data;
 
-            // Store tokens
+            // Store tokens in localStorage
             localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access);
             localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh);
 
@@ -131,9 +157,7 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(false);
 
             // Redirect to login page
-            if (typeof window !== "undefined") {
-                window.location.href = "/login";
-            }
+            window.location.href = "/login";
         }
     }, [axios]);
 

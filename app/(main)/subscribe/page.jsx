@@ -161,9 +161,17 @@ export default function SubscriptionFlow() {
     setApiLoading(true);
 
     try {
-      // Validate email is provided
-      if (!email) {
+      const trimmedEmail = email.trim();
+      const trimmedWhatsapp = whatsappNumber.trim();
+
+      if (method === "email" && !trimmedEmail) {
         setApiError("Please provide an email address.");
+        setApiLoading(false);
+        return;
+      }
+
+      if (method === "whatsapp" && !trimmedWhatsapp) {
+        setApiError("Please provide a WhatsApp number.");
         setApiLoading(false);
         return;
       }
@@ -181,8 +189,6 @@ export default function SubscriptionFlow() {
       }
 
       const payload = {
-        email,
-        phone: whatsappNumber,
         notification_method: method,
         subscription_type: "daily",
         selected_mosques: selectedMosques,
@@ -190,6 +196,14 @@ export default function SubscriptionFlow() {
         notification_minutes_before: Number(reminderOffset),
         selected_prayers: selectedPrayers,
       };
+
+      if (trimmedEmail) {
+        payload.email = trimmedEmail;
+      }
+
+      if (trimmedWhatsapp) {
+        payload.phone = trimmedWhatsapp;
+      }
 
       await subscriptionService.create(payload);
 

@@ -18,7 +18,7 @@ export default function Navbar() {
   const isActive = (href) =>
     pathname === href ?
       "text-[#26FFA0] font-semibold"
-    : "hover:text-emerald-300 text-white";
+      : "hover:text-emerald-300 text-white";
 
   const links = (
     <>
@@ -92,13 +92,11 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`w-[320px] md:w-[1100px] mt-6 px-4 md:px-0 ${
-        nunito.className
-      } fixed z-50 transition-all duration-300 ${
-        solidBg ?
+      className={`w-[320px] md:w-[1100px] mt-6 px-4 md:px-0 ${nunito.className
+        } fixed z-50 transition-all duration-300 ${solidBg ?
           "bg-[#1b8a6b]/90 shadow-xl rounded-[20px] border border-white/20"
-        : "bg-white/20 backdrop-blur-md rounded-[20px] border border-white/20"
-      }`}
+          : "bg-white/20 backdrop-blur-md rounded-[20px] border border-white/20"
+        }`}
     >
       <div className="px-6 md:px-11 py-[10px] flex items-center justify-between">
         {/* Desktop Links */}
@@ -112,17 +110,13 @@ export default function Navbar() {
           >
             {isOpen ?
               <X size={32} />
-            : <Menu size={32} />}
+              : <Menu size={32} />}
           </button>
         </div>
         {/* User Profile */}
         <div className="flex md:hidden items-center gap-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-gray-100 cursor-pointer shadow-sm">
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/9/99/Sample_User_Icon.png"
-              alt="User profile"
-              className="w-full h-full object-cover"
-            />
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#26FFA0] to-[#238B57] border-2 border-gray-100 cursor-pointer shadow-sm flex items-center justify-center">
+            <span className="text-white font-bold text-sm">U</span>
           </div>
         </div>
         {/* Auth Buttons */}
@@ -144,11 +138,10 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       <div
-        className={`md:hidden absolute top-full left-4 right-4 mt-2 transition-all duration-300 ease-in-out transform ${
-          isOpen ?
+        className={`md:hidden absolute top-full left-4 right-4 mt-2 transition-all duration-300 ease-in-out transform ${isOpen ?
             "opacity-100 translate-y-0"
-          : "opacity-0 -translate-y-4 pointer-events-none"
-        }`}
+            : "opacity-0 -translate-y-4 pointer-events-none"
+          }`}
       >
         <div className="bg-[#1b8a6b]/90 backdrop-blur-xl border border-white/20 rounded-[20px] p-6 flex flex-col gap-4 shadow-2xl text-white">
           {links}

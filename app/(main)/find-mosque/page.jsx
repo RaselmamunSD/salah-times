@@ -256,15 +256,19 @@ export default function FindMosque() {
     };
   }, [mosques]);
 
-  const googleEmbedUrl = useMemo(
-    () =>
-      `https://www.google.com/maps?q=${mapCenter.latitude},${mapCenter.longitude}&z=13&output=embed`,
-    [mapCenter.latitude, mapCenter.longitude]
-  );
+  const mapEmbedUrl = useMemo(() => {
+    const delta = 0.05;
+    const left = mapCenter.longitude - delta;
+    const right = mapCenter.longitude + delta;
+    const top = mapCenter.latitude + delta;
+    const bottom = mapCenter.latitude - delta;
 
-  const googleLargerMapUrl = useMemo(
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${left}%2C${bottom}%2C${right}%2C${top}&layer=mapnik&marker=${mapCenter.latitude}%2C${mapCenter.longitude}`;
+  }, [mapCenter.latitude, mapCenter.longitude]);
+
+  const mapLargerUrl = useMemo(
     () =>
-      `https://www.google.com/maps/search/?api=1&query=${mapCenter.latitude},${mapCenter.longitude}`,
+      `https://www.openstreetmap.org/?mlat=${mapCenter.latitude}&mlon=${mapCenter.longitude}#map=13/${mapCenter.latitude}/${mapCenter.longitude}`,
     [mapCenter.latitude, mapCenter.longitude]
   );
 
@@ -384,18 +388,18 @@ export default function FindMosque() {
           {/* Left Column: Map View */}
           <div className="md:col-span-5 h-[400px] md:h-[calc(100vh-320px)] md:sticky md:top-6 rounded-xl overflow-hidden shadow-sm border border-gray-100 bg-[#E5E3DF] relative">
             <iframe
-              title="Google Map"
-              src={googleEmbedUrl}
+              title="Map"
+              src={mapEmbedUrl}
               className="absolute inset-0 w-full h-full border-0"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
               allowFullScreen
             />
             <a
-              href={googleLargerMapUrl}
+              href={mapLargerUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="absolute top-4 left-4 bg-white px-3 py-1.5 rounded shadow text-xs font-medium text-[#1A73E8] z-10"
+              className="absolute top-4 left-4 bg-white px-3 py-1.5 rounded shadow text-xs font-medium text-[#238B57] z-10"
             >
               View larger map
             </a>
