@@ -34,15 +34,7 @@ subscriptionAxios.interceptors.request.use(
 // Response interceptor for error handling
 subscriptionAxios.interceptors.response.use(
     (response) => response,
-    (error) => {
-        // Handle 401 globally
-        if (error.response?.status === 401) {
-            if (typeof window !== "undefined") {
-                window.location.href = "/login";
-            }
-        }
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 export const subscriptionService = {
@@ -129,4 +121,3 @@ export const subscriptionService = {
 };
 
 export default subscriptionService;
-

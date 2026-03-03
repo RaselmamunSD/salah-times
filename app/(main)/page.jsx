@@ -8,7 +8,7 @@ import ActionButtons from "../components/home/ActionButtons";
 import TimeSection from "../components/home/TimeSection";
 import MosquesNearYou from "../components/home/MosquesNearYou";
 import RegisterMosque from "../components/home/RegisterMosque";
-import Newsletter from "../components/home/Newsletter";
+
 import TrustSection from "../components/home/TrustSection";
 
 const inter = Inter({
@@ -60,7 +60,7 @@ export default function Main() {
 
       <MosquesNearYou currentLocation={currentLocation} refreshKey={refreshKey} />
       <RegisterMosque />
-      <Newsletter />
+
       <TrustSection />
     </main>
   );

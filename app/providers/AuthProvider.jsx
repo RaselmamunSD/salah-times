@@ -156,8 +156,8 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
             setIsAuthenticated(false);
 
-            // Redirect to login page
-            window.location.href = "/login";
+            // Redirect to home page (guest can browse public pages)
+            window.location.replace("/");
         }
     }, [axios]);
 
@@ -243,4 +243,3 @@ export const useAuth = () => {
 };
 
 export default AuthContext;
-

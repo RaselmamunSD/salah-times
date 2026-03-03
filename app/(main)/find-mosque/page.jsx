@@ -180,6 +180,11 @@ export default function FindMosque() {
         setFavoriteIds((prev) => new Set(prev).add(mosqueId));
       }
     } catch (error) {
+      if (error?.response?.status === 401 && typeof window !== "undefined") {
+        const returnUrl = encodeURIComponent(window.location.pathname);
+        window.location.href = `/login?returnUrl=${returnUrl}`;
+        return;
+      }
       console.error("Failed to toggle favorite:", error);
     }
   };

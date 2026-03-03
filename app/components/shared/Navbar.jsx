@@ -5,6 +5,8 @@ import { Nunito } from "next/font/google";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/app/providers/AuthProvider";
+import Image from "next/image";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -13,8 +15,17 @@ const nunito = Nunito({
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState("");
   const pathname = usePathname();
-
+  const { user } = useAuth();
+  const rawProfileImage = user?.profile_image || "";
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  const profileImage = rawProfileImage.startsWith("http")
+    ? rawProfileImage
+    : rawProfileImage
+      ? `${apiBaseUrl}${rawProfileImage.startsWith("/") ? "" : "/"}${rawProfileImage}`
+      : "";
+  const hasProfileImage = Boolean(profileImage) && failedAvatarUrl !== profileImage;
   const isActive = (href) =>
     pathname === href ?
       "text-[#26FFA0] font-semibold"
@@ -115,49 +126,97 @@ export default function Navbar() {
         </div>
         {/* User Profile */}
         <div className="flex md:hidden items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#26FFA0] to-[#238B57] border-2 border-gray-100 cursor-pointer shadow-sm flex items-center justify-center">
-            <span className="text-white font-bold text-sm">U</span>
-          </div>
+          {user && hasProfileImage ? (
+            <Image
+              src={profileImage}
+              alt="Profile"
+              width={40}
+              height={40}
+              unoptimized
+              onError={() => setFailedAvatarUrl(profileImage)}
+              className="rounded-full border-2 border-gray-100 object-cover"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#26FFA0] to-[#238B57] border-2 border-gray-100 cursor-pointer shadow-sm flex items-center justify-center">
+              <span className="text-white font-bold text-sm">U</span>
+            </div>
+          )}
         </div>
         {/* Auth Buttons */}
-        <div className="hidden md:flex items-center gap-4 md:gap-6">
-          <Link
-            href="/login"
-            className="text-[#26FFA0] font-semibold text-lg md:text-xl"
-          >
-            Login
-          </Link>
-          <Link
-            href="/register"
-            className="bg-gradient-to-b from-[#ADFFDB] to-[#00FF8F] cursor-pointer text-[#006E3E] font-semibold px-4 py-2 md:p-3 rounded-[10px] transition-all shadow-xl text-base md:text-[20px] whitespace-nowrap"
-          >
-            Registration
-          </Link>
-        </div>
+        {
+          user ? (
+            hasProfileImage ? (
+              <Image
+                src={profileImage}
+                alt="Profile"
+                width={40}
+                height={40}
+                unoptimized
+                onError={() => setFailedAvatarUrl(profileImage)}
+                className="rounded-full border-2 border-gray-100 object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#26FFA0] to-[#238B57] border-2 border-gray-100 shadow-sm flex items-center justify-center">
+                <span className="text-white font-bold text-sm">U</span>
+              </div>
+            )
+          ) : <div className="hidden md:flex items-center gap-4 md:gap-6">
+            <Link
+              href="/login"
+              className="text-[#26FFA0] font-semibold text-lg md:text-xl"
+            >
+              Login
+            </Link>
+            <Link
+              href="/register"
+              className="bg-gradient-to-b from-[#ADFFDB] to-[#00FF8F] cursor-pointer text-[#006E3E] font-semibold px-4 py-2 md:p-3 rounded-[10px] transition-all shadow-xl text-base md:text-[20px] whitespace-nowrap"
+            >
+              Registration
+            </Link>
+          </div>
+        }
       </div>
 
       {/* Mobile Menu */}
       <div
         className={`md:hidden absolute top-full left-4 right-4 mt-2 transition-all duration-300 ease-in-out transform ${isOpen ?
-            "opacity-100 translate-y-0"
-            : "opacity-0 -translate-y-4 pointer-events-none"
+          "opacity-100 translate-y-0"
+          : "opacity-0 -translate-y-4 pointer-events-none"
           }`}
       >
-        <div className="bg-[#1b8a6b]/90 backdrop-blur-xl border border-white/20 rounded-[20px] p-6 flex flex-col gap-4 shadow-2xl text-white">
-          {links}
-          <Link
-            href="/login"
-            className="text-[#26FFA0] text-center font-semibold text-lg md:text-xl"
-          >
-            Login
-          </Link>
-          <Link
-            href="/register"
-            className="text-center bg-gradient-to-b from-[#ADFFDB] to-[#00FF8F] cursor-pointer text-[#006E3E] font-semibold px-4 py-2 md:p-3 rounded-[10px] transition-all shadow-xl text-base md:text-[20px] whitespace-nowrap"
-          >
-            Registration
-          </Link>
-        </div>
+        {
+          user ? (
+            hasProfileImage ? (
+              <Image
+                src={profileImage}
+                alt="Profile"
+                width={40}
+                height={40}
+                unoptimized
+                onError={() => setFailedAvatarUrl(profileImage)}
+                className="rounded-full mb-4 border-2 border-gray-100 object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#26FFA0] to-[#238B57] border-2 border-gray-100 mb-4 shadow-sm flex items-center justify-center">
+                <span className="text-white font-bold text-sm">U</span>
+              </div>
+            )
+          ) : <div className="bg-[#1b8a6b]/90 backdrop-blur-xl border border-white/20 rounded-[20px] p-6 flex flex-col gap-4 shadow-2xl text-white">
+            {links}
+            <Link
+              href="/login"
+              className="text-[#26FFA0] text-center font-semibold text-lg md:text-xl"
+            >
+              Login
+            </Link>
+            <Link
+              href="/register"
+              className="text-center bg-gradient-to-b from-[#ADFFDB] to-[#00FF8F] cursor-pointer text-[#006E3E] font-semibold px-4 py-2 md:p-3 rounded-[10px] transition-all shadow-xl text-base md:text-[20px] whitespace-nowrap"
+            >
+              Registration
+            </Link>
+          </div>
+        }
       </div>
     </nav>
   );

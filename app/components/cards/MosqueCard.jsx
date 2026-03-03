@@ -1,10 +1,9 @@
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import mosqueIcon from "../../../public/icons/mosque.png";
 import EmptyStar from "../icons/EmptyStar";
 import { Inter, Poppins } from "next/font/google";
 import { MapPin, Clock, Calendar } from "lucide-react";
-import Link from "next/link";
 import { mosqueService } from "../../services/mosque";
 
 const poppins = Poppins({
@@ -14,25 +13,24 @@ const poppins = Poppins({
 const inter = Inter({
   subsets: ["latin"],
 });
-const MosqueCard = ({ mosque, onFavoriteChanged }) => {
-  const [isFavorite, setIsFavorite] = useState(Boolean(mosque?.isFavorite));
-
-  useEffect(() => {
-    setIsFavorite(Boolean(mosque?.isFavorite));
-  }, [mosque?.isFavorite]);
+const MosqueCard = ({ mosque, onFavoriteChanged, onViewMonthlyTimetable }) => {
+  const isFavorite = Boolean(mosque?.isFavorite);
 
   const handleFavoriteClick = async () => {
     try {
       if (isFavorite) {
         await mosqueService.removeFavorite(mosque.id);
-        setIsFavorite(false);
         onFavoriteChanged?.(mosque.id, false);
       } else {
         await mosqueService.addFavorite(mosque.id);
-        setIsFavorite(true);
         onFavoriteChanged?.(mosque.id, true);
       }
     } catch (error) {
+      if (error?.response?.status === 401 && typeof window !== "undefined") {
+        const returnUrl = encodeURIComponent(window.location.pathname);
+        window.location.href = `/login?returnUrl=${returnUrl}`;
+        return;
+      }
       console.error("Failed to update favorite:", error);
     }
   };
@@ -90,13 +88,14 @@ const MosqueCard = ({ mosque, onFavoriteChanged }) => {
         </div>
 
         {/* View Monthly Timetable Link */}
-        <Link
-          href={`/mosques/${mosque.id || 1}`}
+        <button
+          type="button"
+          onClick={() => onViewMonthlyTimetable?.(mosque)}
           className="flex items-center gap-2 text-[#1F8A5B] text-sm font-medium hover:text-[#157a49] transition-colors"
         >
           <Calendar size={16} />
           <span>View Monthly Timetable</span>
-        </Link>
+        </button>
       </div>
     </div>
   );

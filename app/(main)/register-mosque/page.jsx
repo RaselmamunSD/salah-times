@@ -1,60 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import {
   Check,
   MapPin,
   Mail,
   Smartphone,
-  ChevronRight,
-  Clock,
   Info,
   Facebook,
   Twitter,
   Instagram,
   Linkedin,
   Send,
-  Globe,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
 } from "lucide-react";
 import { Inter, Lato } from "next/font/google";
 import { mosqueService } from "../../services/mosque";
+import { useAuth } from "../../providers/AuthProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 const lato = Lato({ subsets: ["latin"], weight: ["400", "700", "900"] });
-
-// --- Data Structures ---
-const PRAYERS = [
-  {
-    label: "Fajr",
-    beginningKey: "fajr_beginning",
-    jamaahKey: "fajr_jamaah",
-  },
-  {
-    label: "Sunrise",
-    beginningKey: "sunrise",
-    jamaahKey: null,
-  },
-  {
-    label: "Dhuhr",
-    beginningKey: "dhuhr_beginning",
-    jamaahKey: "dhuhr_jamaah",
-  },
-  {
-    label: "Asr",
-    beginningKey: "asr_beginning",
-    jamaahKey: "asr_jamaah",
-  },
-  {
-    label: "Maghrib",
-    beginningKey: "maghrib_sunset",
-    jamaahKey: "maghrib_jamaah",
-  },
-  {
-    label: "Isha",
-    beginningKey: "isha_beginning",
-    jamaahKey: "isha_jamaah",
-  },
-];
 
 const FACILITIES = [
   { id: "wudu", label: "Wudu Area" },
@@ -66,7 +34,10 @@ const FACILITIES = [
 ];
 
 export default function RegisterMosqueFlow() {
+  const { isAuthenticated } = useAuth();
   const [step, setStep] = useState(1);
+  const [prayerTimetableImage, setPrayerTimetableImage] = useState(null);
+  const [prayerTimetablePreview, setPrayerTimetablePreview] = useState("");
   const [formData, setFormData] = useState({
     mosqueName: "",
     contactPerson: "",
@@ -117,15 +88,6 @@ export default function RegisterMosqueFlow() {
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
   const buildWhatsAppMessage = () => {
-    const prayerTimeLines = PRAYERS.map((prayer) => {
-      const beginningValue = formData.prayerTimes[prayer.beginningKey] || "-";
-      const jamaahValue = prayer.jamaahKey
-        ? formData.prayerTimes[prayer.jamaahKey] || "-"
-        : "N/A";
-
-      return `${prayer.label}: Beginning ${beginningValue}, Iqamah ${jamaahValue}`;
-    });
-
     const lines = [
       "Assalamu Alaikum,",
       "",
@@ -138,8 +100,7 @@ export default function RegisterMosqueFlow() {
       `📍 Area/District: ${formData.area || "-"}`,
       `📝 Additional Info: ${formData.additionalInfo || "-"}`,
       "",
-      "Prayer Times:",
-      ...prayerTimeLines,
+      `🖼 Prayer Timetable Image: ${prayerTimetableImage?.name || "Not uploaded"}`,
       "",
       `Facilities: ${formData.facilities.length
         ? formData.facilities.join(", ")
@@ -152,16 +113,39 @@ export default function RegisterMosqueFlow() {
     return lines.join("\n");
   };
 
-  const handlePrayerTimeChange = (field) => (e) => {
-    const value = e.target.value;
-    setFormData((prev) => ({
-      ...prev,
-      prayerTimes: {
-        ...prev.prayerTimes,
-        [field]: value,
-      },
-    }));
+  const handlePrayerTimetableUpload = (file) => {
+    if (!file || !file.type.startsWith("image/")) {
+      return;
+    }
+
+    setPrayerTimetableImage(file);
+    const previewUrl = URL.createObjectURL(file);
+    setPrayerTimetablePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return previewUrl;
+    });
   };
+
+  const handlePrayerTimetableInputChange = (e) => {
+    const file = e.target.files?.[0];
+    handlePrayerTimetableUpload(file);
+  };
+
+  const clearPrayerTimetableImage = () => {
+    setPrayerTimetableImage(null);
+    setPrayerTimetablePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return "";
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (prayerTimetablePreview) {
+        URL.revokeObjectURL(prayerTimetablePreview);
+      }
+    };
+  }, [prayerTimetablePreview]);
 
   const getCurrentCoordinates = () =>
     new Promise((resolve) => {
@@ -183,6 +167,12 @@ export default function RegisterMosqueFlow() {
     });
 
   const handleSubmitToWhatsApp = async () => {
+    if (!isAuthenticated && typeof window !== "undefined") {
+      const returnUrl = encodeURIComponent(window.location.pathname);
+      window.location.href = `/login?returnUrl=${returnUrl}`;
+      return;
+    }
+
     setSubmissionError("");
 
     if (!formData.mosqueName || !formData.phone || !formData.address) {
@@ -425,57 +415,64 @@ export default function RegisterMosqueFlow() {
                 Prayer Times
               </h2>
               <p className="text-slate-500 mb-10">
-                Enter your mosque's prayer schedule
+                Upload a photo of your mosque&apos;s monthly prayer timetable
               </p>
 
-              <div className="overflow-hidden border border-slate-100 rounded-2xl mb-10">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-                      <th className="px-6 py-4">Prayer</th>
-                      <th className="px-6 py-4">Beginning Time</th>
-                      <th className="px-6 py-4">Iqamah Time (Optional)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {PRAYERS.map((prayer) => (
-                      <tr key={prayer.label}>
-                        <td className="px-6 py-5 font-bold text-slate-700 text-sm">
-                          {prayer.label}
-                        </td>
-                        <td className="px-6 py-5">
-                          <input
-                            type="time"
-                            step="60"
-                            placeholder="00:00 AM"
-                            value={formData.prayerTimes[prayer.beginningKey]}
-                            onChange={handlePrayerTimeChange(prayer.beginningKey)}
-                            className="w-full text-sm bg-transparent border-b border-slate-100 focus:border-[#238B57] focus:outline-none pb-1"
-                          />
-                        </td>
-                        <td className="px-6 py-5">
-                          <input
-                            type="time"
-                            step="60"
-                            placeholder="00:00 AM"
-                            value={
-                              prayer.jamaahKey
-                                ? formData.prayerTimes[prayer.jamaahKey]
-                                : ""
-                            }
-                            onChange={
-                              prayer.jamaahKey
-                                ? handlePrayerTimeChange(prayer.jamaahKey)
-                                : undefined
-                            }
-                            disabled={!prayer.jamaahKey}
-                            className="w-full text-sm bg-transparent border-b border-slate-100 focus:border-[#238B57] focus:outline-none pb-1"
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="mb-10">
+                <label
+                  htmlFor="prayer-timetable-image"
+                  className="block border-2 border-dashed border-slate-200 hover:border-[#238B57] rounded-2xl bg-slate-50/60 p-8 transition-colors cursor-pointer"
+                >
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <div className="w-16 h-16 rounded-full bg-[#E8F5EE] text-[#238B57] flex items-center justify-center mb-4">
+                      <Upload size={26} />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-800 mb-2">
+                      Upload Prayer Timetable Image
+                    </h3>
+                    <p className="text-sm text-slate-500">
+                      JPG, PNG, or WEBP image from your notice board
+                    </p>
+                  </div>
+                  <input
+                    id="prayer-timetable-image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePrayerTimetableInputChange}
+                    className="sr-only"
+                  />
+                </label>
+
+                {prayerTimetableImage && (
+                  <div className="mt-5 p-4 rounded-2xl border border-slate-200 bg-white">
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
+                        <ImageIcon size={16} className="text-[#238B57] shrink-0" />
+                        <span className="truncate font-medium">
+                          {prayerTimetableImage.name}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={clearPrayerTimetableImage}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 size={14} />
+                        Remove
+                      </button>
+                    </div>
+                    <div className="rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
+                      <Image
+                        src={prayerTimetablePreview}
+                        alt="Prayer timetable preview"
+                        width={1200}
+                        height={900}
+                        unoptimized
+                        className="w-full h-auto max-h-[360px] object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-4">
@@ -502,7 +499,7 @@ export default function RegisterMosqueFlow() {
                 Additional Details
               </h2>
               <p className="text-slate-500 mb-10">
-                Tell us more about your mosque's facilities
+                Tell us more about your mosque&apos;s facilities
               </p>
 
               <div className="mb-8">
@@ -515,8 +512,8 @@ export default function RegisterMosqueFlow() {
                       key={facility.id}
                       onClick={() => toggleFacility(facility.id)}
                       className={`flex items-center gap-3 p-4 bg-slate-50 rounded-xl border transition-all group cursor-pointer ${formData.facilities.includes(facility.id)
-                          ? "border-[#238B57] bg-[#E8F5EE]"
-                          : "border-transparent"
+                        ? "border-[#238B57] bg-[#E8F5EE]"
+                        : "border-transparent"
                         }`}
                     >
                       <div className="w-5 h-5 rounded border-2 border-slate-200 bg-white flex items-center justify-center group-hover:border-[#238B57]">
@@ -554,7 +551,7 @@ export default function RegisterMosqueFlow() {
                     What happens next?
                   </h4>
                   <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                    After clicking continue, you'll be redirected to WhatsApp to
+                    After clicking continue, you&apos;ll be redirected to WhatsApp to
                     communicate with our admin team. They will verify your
                     details and provide you with access to the mosque portal.
                   </p>
@@ -620,7 +617,7 @@ export default function RegisterMosqueFlow() {
               <span className="text-slate-900">Prayer Times</span>
             </div>
             <p className="text-slate-500 text-sm leading-relaxed mb-8">
-              The world's most accurate prayer time app for muslims around the
+              The world&apos;s most accurate prayer time app for muslims around the
               world.
             </p>
             <div className="flex gap-4">

@@ -1,13 +1,19 @@
+"use client";
+
 import { Inter } from "next/font/google";
 import React from "react";
 import tick from "../../../public/icons/tick.png";
 import mosque from "../../../public/icons/mosque.png";
 import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../providers/AuthProvider";
 const inter = Inter({
   subsets: ["latin"],
 });
 const RegisterMosque = () => {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+
   const features = [
     {
       title: "Easy Registration",
@@ -26,6 +32,17 @@ const RegisterMosque = () => {
       sub: "Connect with community members in your area",
     },
   ];
+
+  const handleRegisterClick = () => {
+    if (isAuthenticated) {
+      router.push("/register-mosque");
+      return;
+    }
+
+    const returnUrl = encodeURIComponent("/register-mosque");
+    router.push(`/login?returnUrl=${returnUrl}`);
+  };
+
   return (
     <section className="lg:w-[1216px] mx-auto my-10 md:my-25 md:flex shadow-2xl">
       {/* left side */}
@@ -67,12 +84,13 @@ const RegisterMosque = () => {
             </p>
           </div>
           <div>
-            <Link
-              href="/register-mosque"
+            <button
+              type="button"
+              onClick={handleRegisterClick}
               className="block w-full text-center bg-[#1F8A5B] text-white font-medium text-[18px] p-4 rounded-[14px] cursor-pointer"
             >
               Register Your Mosque
-            </Link>
+            </button>
           </div>
         </div>
       </div>

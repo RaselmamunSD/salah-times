@@ -151,18 +151,13 @@ export const AxiosProvider = ({ children }) => {
           } catch (refreshError) {
             processQueue(refreshError);
 
-            // If refresh fails - clear tokens and redirect to login
+            // If refresh fails - clear tokens and let caller handle auth UI flow
             if (typeof window !== "undefined") {
               localStorage.removeItem(ACCESS_TOKEN_KEY);
               localStorage.removeItem(REFRESH_TOKEN_KEY);
             }
             Cookies.remove(ACCESS_TOKEN_KEY);
             Cookies.remove(REFRESH_TOKEN_KEY);
-
-            // Redirect to login
-            if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
-              window.location.href = "/login";
-            }
 
             return Promise.reject(refreshError);
           } finally {
@@ -198,4 +193,3 @@ export const useAxios = () => {
 
 // Export token keys for use in other modules
 export { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY };
-

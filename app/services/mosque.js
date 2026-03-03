@@ -34,17 +34,7 @@ mosqueAxios.interceptors.request.use(
 // Response interceptor for error handling
 mosqueAxios.interceptors.response.use(
     (response) => response,
-    (error) => {
-        // Handle 401 globally
-        if (error.response?.status === 401) {
-            if (typeof window !== "undefined") {
-                localStorage.removeItem("access_token");
-                localStorage.removeItem("refresh_token");
-                window.location.href = "/login";
-            }
-        }
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
 // ============================================
@@ -458,4 +448,3 @@ export const mosqueApi = {
 };
 
 export default mosqueApi;
-

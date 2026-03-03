@@ -15,6 +15,7 @@ import {
 import { Inter, Lato } from "next/font/google";
 import subscriptionService from "@/app/services/subscriptions";
 import { mosqueService } from "@/app/services/mosque";
+import { useAuth } from "@/app/providers/AuthProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -39,6 +40,7 @@ const PRAYER_LIST = [
 ];
 
 export default function SubscriptionFlow() {
+  const { isAuthenticated } = useAuth();
   const [step, setStep] = useState(1);
   const [method, setMethod] = useState("whatsapp");
   const [email, setEmail] = useState("");
@@ -128,6 +130,12 @@ export default function SubscriptionFlow() {
   };
 
   const nextStep = () => {
+    if (!isAuthenticated && typeof window !== "undefined") {
+      const returnUrl = encodeURIComponent(window.location.pathname);
+      window.location.href = `/login?returnUrl=${returnUrl}`;
+      return;
+    }
+
     if (step === 2 && selectedMosques.length === 0) {
       setApiError("Please select at least one mosque.");
       return;
@@ -156,6 +164,12 @@ export default function SubscriptionFlow() {
   };
 
   const handleCompleteSubscription = async () => {
+    if (!isAuthenticated && typeof window !== "undefined") {
+      const returnUrl = encodeURIComponent(window.location.pathname);
+      window.location.href = `/login?returnUrl=${returnUrl}`;
+      return;
+    }
+
     setApiError("");
     setApiSuccess("");
     setApiLoading(true);
@@ -363,7 +377,7 @@ export default function SubscriptionFlow() {
                       className="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#238B57] focus:border-[#238B57] transition-all"
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      We'll send daily prayer schedules to this email
+                      We&apos;ll send daily prayer schedules to this email
                     </p>
                   </div>
                 )}

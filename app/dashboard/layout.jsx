@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   User,
@@ -45,12 +45,10 @@ const topNavItems = [
 function DashboardLayoutContent({ children }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
   const { user, logout } = useAuth();
 
   const handleLogout = async () => {
     await logout();
-    router.push("/login");
   };
 
   // Get user display name
@@ -215,4 +213,3 @@ export default function DashboardLayout({ children }) {
     </ProtectedRoute>
   );
 }
-
