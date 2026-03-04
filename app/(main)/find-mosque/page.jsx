@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Inter, Lato } from "next/font/google";
 import { mosqueService } from "../../services/mosque";
-import { useAxios } from "../../providers/AxiosProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -35,15 +34,6 @@ const formatTimeShort = (value) => {
   return `${parts[0]?.padStart(2, "0") || "--"}:${parts[1]?.padStart(2, "0") || "--"}`;
 };
 
-const addMinutes = (timeValue, minutes) => {
-  if (!timeValue) return "--:--";
-  const [h = "0", m = "0"] = String(timeValue).split(":");
-  const date = new Date();
-  date.setHours(Number(h), Number(m), 0, 0);
-  date.setMinutes(date.getMinutes() + minutes);
-  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-};
-
 const to12Hour = (timeValue) => {
   if (!timeValue || timeValue === "--:--") return "--:--";
   const [h = "0", m = "0"] = String(timeValue).split(":");
@@ -54,7 +44,6 @@ const to12Hour = (timeValue) => {
 };
 
 export default function FindMosque() {
-  const axios = useAxios();
   const [selectedMosque, setSelectedMosque] = useState(null);
   const [mosques, setMosques] = useState([]);
   const [searchValue, setSearchValue] = useState("");
@@ -197,34 +186,24 @@ export default function FindMosque() {
     document.body.style.overflow = "hidden";
 
     try {
-      const mosqueDetails = await mosqueService.get(mosque.id);
-      const cityId = mosqueDetails?.city;
-      if (!cityId) {
-        setTimetableLoading(false);
-        return;
-      }
-
-      const response = await axios.get("/api/prayer-times/monthly/", {
-        params: {
-          city: cityId,
-          month: activeMonth + 1,
-          year: activeYear,
-        },
+      const response = await mosqueService.getMonthlyTimetable(mosque.id, {
+        month: activeMonth + 1,
+        year: activeYear,
       });
 
-      const rows = Array.isArray(response.data)
-        ? response.data
-        : Array.isArray(response.data?.results)
-          ? response.data.results
+      const rows = Array.isArray(response)
+        ? response
+        : Array.isArray(response?.results)
+          ? response.results
           : [];
 
       const mappedRows = rows.map((row) => ({
         date: `${row.day} ${monthName((row.month || activeMonth + 1) - 1)} ${row.year || activeYear}`,
-        fajr: { a: formatTimeShort(row.fajr), i: addMinutes(formatTimeShort(row.fajr), 15) },
-        dhuhr: { a: formatTimeShort(row.dhuhr), i: addMinutes(formatTimeShort(row.dhuhr), 15) },
-        asr: { a: formatTimeShort(row.asr), i: addMinutes(formatTimeShort(row.asr), 15) },
-        maghrib: { a: formatTimeShort(row.maghrib), i: addMinutes(formatTimeShort(row.maghrib), 5) },
-        isha: { a: formatTimeShort(row.isha), i: addMinutes(formatTimeShort(row.isha), 15) },
+        fajr: { a: formatTimeShort(row.fajr_adhan), i: formatTimeShort(row.fajr_iqamah) },
+        dhuhr: { a: formatTimeShort(row.dhuhr_adhan), i: formatTimeShort(row.dhuhr_iqamah) },
+        asr: { a: formatTimeShort(row.asr_adhan), i: formatTimeShort(row.asr_iqamah) },
+        maghrib: { a: formatTimeShort(row.maghrib_adhan), i: formatTimeShort(row.maghrib_iqamah) },
+        isha: { a: formatTimeShort(row.isha_adhan), i: formatTimeShort(row.isha_iqamah) },
       }));
 
       setTimetableData(mappedRows);

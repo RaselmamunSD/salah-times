@@ -9,6 +9,8 @@ import {
   Star,
   MapPin,
   Settings,
+  Building2,
+  KeyRound,
   LogOut,
   Menu,
 } from "lucide-react";
@@ -34,6 +36,12 @@ const navItems = [
   { name: "Settings", icon: Settings, href: "/dashboard/settings" },
 ];
 
+const imamNavItems = [
+  { name: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { name: "Register Your Mosque", icon: Building2, href: "/dashboard/imam-mosques" },
+  { name: "Change Password", icon: KeyRound, href: "/dashboard/profile/change-password" },
+];
+
 const topNavItems = [
   { name: "Home", href: "/" },
   { name: "Find Mosque", href: "/find-mosque" },
@@ -46,6 +54,8 @@ function DashboardLayoutContent({ children }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const isImam = Boolean(user?.is_imam || user?.user_type === "imam");
+  const currentNavItems = isImam ? imamNavItems : navItems;
 
   const handleLogout = async () => {
     await logout();
@@ -114,7 +124,7 @@ function DashboardLayoutContent({ children }) {
 
             {/* Navigation Links */}
             <nav className="flex-1 px-4 space-y-1 mt-4">
-              {navItems.map((item) => {
+              {currentNavItems.map((item) => {
                 const isActive = pathname === item.href;
                 return (
                   <Link

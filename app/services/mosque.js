@@ -11,8 +11,16 @@ import Cookies from "js-cookie";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 const ACCESS_TOKEN_KEY = "access_token";
 
-// Create axios instance
+// Create axios instance for authenticated requests
 const mosqueAxios = axios.create({
+    baseURL: API_URL,
+    headers: {
+        "Content-Type": "application/json",
+    },
+});
+
+// Create axios instance for public endpoints (no auth)
+const publicAxios = axios.create({
     baseURL: API_URL,
     headers: {
         "Content-Type": "application/json",
@@ -304,7 +312,7 @@ export const mosqueService = {
      * @returns {Promise}
      */
     list: async (params = {}) => {
-        const response = await mosqueAxios.get("/api/mosques/", { params });
+        const response = await publicAxios.get("/api/mosques/", { params });
         return response.data;
     },
 
@@ -314,7 +322,7 @@ export const mosqueService = {
      * @returns {Promise}
      */
     get: async (id) => {
-        const response = await mosqueAxios.get(`/api/mosques/${id}/`);
+        const response = await publicAxios.get(`/api/mosques/${id}/`);
         return response.data;
     },
 
@@ -324,7 +332,7 @@ export const mosqueService = {
      * @returns {Promise}
      */
     search: async (query) => {
-        const response = await mosqueAxios.get("/api/mosques/search/", { params: { q: query } });
+        const response = await publicAxios.get("/api/mosques/search/", { params: { q: query } });
         return response.data;
     },
 
@@ -336,7 +344,7 @@ export const mosqueService = {
      * @returns {Promise}
      */
     getNearby: async (lat, lng, radius = 10) => {
-        const response = await mosqueAxios.get("/api/mosques/nearby/", {
+        const response = await publicAxios.get("/api/mosques/nearby/", {
             params: { latitude: lat, longitude: lng, radius }
         });
         return response.data;
@@ -377,17 +385,93 @@ export const mosqueService = {
      * @returns {Promise}
      */
     getPrayerTimes: async (mosqueId) => {
-        const response = await mosqueAxios.get(`/api/mosques/${mosqueId}/prayer_times/`);
+        const response = await publicAxios.get(`/api/mosques/${mosqueId}/prayer_times/`);
         return response.data;
     },
 
     /**
-     * Submit mosque registration request
+     * Get mosque-specific monthly timetable
+     * @param {number} mosqueId
+     * @param {{month?: number, year?: number}} params
+     * @returns {Promise}
+     */
+    getMonthlyTimetable: async (mosqueId, params = {}) => {
+        const response = await publicAxios.get(`/api/mosques/${mosqueId}/monthly-timetable/`, { params });
+        return response.data;
+    },
+
+    /**
+     * Get Imam's own mosques
+     * @returns {Promise}
+     */
+    getImamMosques: async () => {
+        const response = await mosqueAxios.get("/api/mosques/imam/my-mosques/");
+        return response.data;
+    },
+
+    /**
+     * Create mosque as Imam
+     * @param {Object} payload
+     * @returns {Promise}
+     */
+    createImamMosque: async (payload) => {
+        const response = await mosqueAxios.post("/api/mosques/imam/my-mosques/", payload);
+        return response.data;
+    },
+
+    /**
+     * Update mosque as Imam owner
+     * @param {number} mosqueId
+     * @param {Object} payload
+     * @returns {Promise}
+     */
+    updateImamMosque: async (mosqueId, payload) => {
+        const response = await mosqueAxios.patch(`/api/mosques/${mosqueId}/imam/manage/`, payload);
+        return response.data;
+    },
+
+    /**
+     * Delete mosque as Imam owner
+     * @param {number} mosqueId
+     * @returns {Promise}
+     */
+    deleteImamMosque: async (mosqueId) => {
+        const response = await mosqueAxios.delete(`/api/mosques/${mosqueId}/imam/manage/`);
+        return response.data;
+    },
+
+    /**
+     * Save mosque monthly timetable in bulk
+     * @param {number} mosqueId
+     * @param {Object} payload
+     * @returns {Promise}
+     */
+    saveImamMonthlyTimetable: async (mosqueId, payload) => {
+        const response = await mosqueAxios.post(`/api/mosques/${mosqueId}/imam/monthly-timetable/`, payload);
+        return response.data;
+    },
+
+    /**
+     * Delete mosque monthly timetable entries
+     * @param {number} mosqueId
+     * @param {Object} payload - { year, month, days: [1, 2, 3] }
+     * @returns {Promise}
+     */
+    deleteImamMonthlyTimetable: async (mosqueId, payload) => {
+        const response = await mosqueAxios.delete(`/api/mosques/${mosqueId}/imam/monthly-timetable/`, { data: payload });
+        return response.data;
+    },
+
+    /**
+     * Submit mosque registration request (must NOT use auth token)
      * @param {Object} payload - Registration payload
      * @returns {Promise}
      */
     registerMosqueRequest: async (payload) => {
-        const response = await mosqueAxios.post("/api/mosques/register/", payload);
+        const isFormData = typeof FormData !== "undefined" && payload instanceof FormData;
+        const response = await publicAxios.post("/api/mosques/register/", payload, isFormData
+            ? { headers: { "Content-Type": "multipart/form-data" } }
+            : undefined);
         return response.data;
     },
 };

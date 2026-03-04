@@ -2,13 +2,14 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { Star, MapPin, ArrowRight, User, LogOut } from "lucide-react";
+import { Star, MapPin, ArrowRight, User, LogOut, Building2, CalendarDays } from "lucide-react";
 import { ProtectedRoute } from "../components/ProtectedRoute";
 import { useAuth } from "../providers/AuthProvider";
 
 const DashboardHome = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const router = useRouter();
+  const isImam = Boolean(user?.is_imam || user?.user_type === "imam");
 
   const prayerTimes = [
     { name: "Fajr", time: "05:45 AM" },
@@ -37,6 +38,66 @@ const DashboardHome = () => {
   };
 
   const profileImageUrl = getAbsoluteImageUrl(user?.profile_image);
+
+  if (isImam) {
+    return (
+      <div className="max-w-6xl mx-auto p-8 bg-[#F8F9FA] min-h-screen text-slate-800">
+        <header className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-[#1E293B]">Imam Dashboard</h1>
+            <p className="text-slate-500 mt-1">Welcome back, {userName}</p>
+          </div>
+
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+            title="Logout"
+          >
+            <LogOut size={18} />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
+        </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-2xl shadow-[0_2px_15px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col h-full">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 bg-[#EEF7FB] rounded-xl flex items-center justify-center text-blue-400">
+                <Building2 size={24} color="#1F6F8B" />
+              </div>
+              <div>
+                <div className="text-[17px] font-bold text-[#1E293B] leading-tight">Register Your Mosque</div>
+                <div className="text-sm text-slate-500 font-medium">Add, edit, delete mosque information</div>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push("/dashboard/imam-mosques")}
+              className="mt-auto flex items-center gap-1 text-[13px] font-semibold text-[#1F6F8B] hover:opacity-80 transition-opacity"
+            >
+              Open mosque manager <ArrowRight size={14} />
+            </button>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl shadow-[0_2px_15px_rgba(0,0,0,0.02)] border border-gray-100 flex flex-col h-full">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 bg-[#E9F3EE] rounded-xl flex items-center justify-center text-[#238B57]">
+                <CalendarDays size={24} />
+              </div>
+              <div>
+                <div className="text-[17px] font-bold text-[#1E293B] leading-tight">Monthly Prayer Timetable</div>
+                <div className="text-sm text-slate-500 font-medium">Maintain adhan and iqamah timetable</div>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push("/dashboard/imam-mosques")}
+              className="mt-auto flex items-center gap-1 text-[13px] font-semibold text-[#238B57] hover:opacity-80 transition-opacity"
+            >
+              Manage timetable <ArrowRight size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-8 bg-[#F8F9FA] min-h-screen text-slate-800">

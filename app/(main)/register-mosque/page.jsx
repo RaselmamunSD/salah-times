@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   Check,
   MapPin,
@@ -35,6 +36,7 @@ const FACILITIES = [
 
 export default function RegisterMosqueFlow() {
   const { isAuthenticated } = useAuth();
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [prayerTimetableImage, setPrayerTimetableImage] = useState(null);
   const [prayerTimetablePreview, setPrayerTimetablePreview] = useState("");
@@ -83,11 +85,59 @@ export default function RegisterMosqueFlow() {
 
   const [submissionError, setSubmissionError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationError, setValidationError] = useState("");
 
-  const nextStep = () => setStep((prev) => Math.min(prev + 1, 5));
+  const validateStep = (currentStep) => {
+    setValidationError("");
+
+    if (currentStep === 1) {
+      // Validate Basic Info
+      if (!formData.mosqueName.trim()) {
+        setValidationError("Mosque Name is required");
+        return false;
+      }
+      if (!formData.phone.trim()) {
+        setValidationError("Phone Number is required");
+        return false;
+      }
+      if (!formData.contactPerson.trim()) {
+        setValidationError("Contact Person is required");
+        return false;
+      }
+      if (!formData.email.trim()) {
+        setValidationError("Email Address is required");
+        return false;
+      }
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        setValidationError("Please enter a valid email address");
+        return false;
+      }
+    } else if (currentStep === 2) {
+      // Validate Location
+      if (!formData.address.trim()) {
+        setValidationError("Full Address is required");
+        return false;
+      }
+      if (!formData.area.trim()) {
+        setValidationError("Area/District is required");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const nextStep = () => {
+    if (validateStep(step)) {
+      setStep((prev) => Math.min(prev + 1, 5));
+    }
+  };
+
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
-  const buildWhatsAppMessage = () => {
+  const buildWhatsAppMessage = (uploadedImageUrl = "") => {
     const lines = [
       "Assalamu Alaikum,",
       "",
@@ -100,7 +150,7 @@ export default function RegisterMosqueFlow() {
       `📍 Area/District: ${formData.area || "-"}`,
       `📝 Additional Info: ${formData.additionalInfo || "-"}`,
       "",
-      `🖼 Prayer Timetable Image: ${prayerTimetableImage?.name || "Not uploaded"}`,
+      `🖼 Prayer Timetable Image: ${uploadedImageUrl || prayerTimetableImage?.name || "Not uploaded"}`,
       "",
       `Facilities: ${formData.facilities.length
         ? formData.facilities.join(", ")
@@ -187,24 +237,34 @@ export default function RegisterMosqueFlow() {
     try {
       const { latitude, longitude } = await getCurrentCoordinates();
 
-      await mosqueService.registerMosqueRequest({
-        mosque_name: formData.mosqueName,
-        contact_person: formData.contactPerson,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        area: formData.area,
-        latitude,
-        longitude,
-        facilities: formData.facilities,
-        additional_info: formData.additionalInfo,
-        prayer_times: formData.prayerTimes,
-      });
+      const formPayload = new FormData();
+      formPayload.append("mosque_name", formData.mosqueName);
+      formPayload.append("contact_person", formData.contactPerson || "");
+      formPayload.append("email", formData.email || "");
+      formPayload.append("phone", formData.phone || "");
+      formPayload.append("address", formData.address || "");
+      formPayload.append("area", formData.area || "");
+      if (latitude !== null && latitude !== undefined) {
+        formPayload.append("latitude", String(latitude));
+      }
+      if (longitude !== null && longitude !== undefined) {
+        formPayload.append("longitude", String(longitude));
+      }
+      formPayload.append("facilities", JSON.stringify(formData.facilities || []));
+      formPayload.append("additional_info", formData.additionalInfo || "");
+      formPayload.append("prayer_times", JSON.stringify(formData.prayerTimes || {}));
+      if (prayerTimetableImage) {
+        formPayload.append("prayer_timetable_image", prayerTimetableImage);
+      }
+
+      const registerResponse = await mosqueService.registerMosqueRequest(formPayload);
 
       const adminNumber =
         process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "+8801738060329";
       const numericPhone = adminNumber.replace(/[^\d]/g, "");
-      const text = encodeURIComponent(buildWhatsAppMessage());
+      const text = encodeURIComponent(
+        buildWhatsAppMessage(registerResponse?.prayer_timetable_image_url || "")
+      );
       const url = `https://wa.me/${numericPhone}?text=${text}`;
 
       if (typeof window !== "undefined") {
@@ -213,9 +273,29 @@ export default function RegisterMosqueFlow() {
 
       setStep(5);
     } catch (error) {
-      const message =
-        error?.response?.data?.detail ||
-        "Failed to submit request. Please try again.";
+      let message = "Failed to submit request. Please try again.";
+
+      // Try to get detailed error message from backend
+      if (error?.response?.data) {
+        const data = error.response.data;
+        if (data.detail) {
+          message = data.detail;
+        } else if (typeof data === 'object') {
+          // Try to find first validation error
+          for (const key in data) {
+            if (Array.isArray(data[key]) && data[key].length > 0) {
+              message = `${key}: ${data[key][0]}`;
+              break;
+            } else if (typeof data[key] === 'string') {
+              message = `${key}: ${data[key]}`;
+              break;
+            }
+          }
+        }
+      } else if (error?.message) {
+        message = error.message;
+      }
+
       setSubmissionError(message);
     } finally {
       setIsSubmitting(false);
@@ -330,6 +410,12 @@ export default function RegisterMosqueFlow() {
                 </div>
               </div>
 
+              {validationError && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+                  {validationError}
+                </div>
+              )}
+
               <button
                 onClick={nextStep}
                 className="w-full py-5 bg-[#238B57] text-white font-bold rounded-2xl shadow-xl shadow-green-900/10 hover:bg-[#1a6d44] transition-all"
@@ -390,6 +476,12 @@ export default function RegisterMosqueFlow() {
                   </div>
                 </div>
               </div>
+
+              {validationError && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+                  {validationError}
+                </div>
+              )}
 
               <div className="flex gap-4">
                 <button
@@ -596,7 +688,7 @@ export default function RegisterMosqueFlow() {
                 the information and get back to you shortly.
               </p>
               <button
-                onClick={() => setStep(1)}
+                onClick={() => router.push('/')}
                 className="px-12 py-4 bg-[#238B57] text-white font-bold rounded-xl"
               >
                 Return Home

@@ -29,6 +29,7 @@ export default function Footer() {
                 src={logo}
                 alt="Salaah Logo"
                 fill
+                sizes="(max-width: 768px) 96px, 96px"
                 className="object-contain"
               />
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useState } from "react";
@@ -63,24 +63,24 @@ const LoginPage = () => {
         )}
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          {/* Email Address */}
+          {/* Username or Email */}
           <div className="space-y-2">
             <label
               htmlFor="email"
               className="text-sm font-medium text-[#1b9c5e]"
             >
-              Email Address *
+              Username or Email *
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                <Mail size={18} />
+                <User size={18} />
               </div>
               <input
                 id="email"
                 name="email"
-                type="email"
+                type="text"
                 required
-                placeholder="your.email@example.com"
+                placeholder="username or your.email@example.com"
                 className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1b9c5e] focus:border-[#1b9c5e] outline-none transition-colors sm:text-sm placeholder:text-gray-400"
               />
             </div>

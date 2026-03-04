@@ -56,7 +56,7 @@ const RegisterMosque = () => {
           {features.map((feature, index) => (
             <div key={index} className="flex gap-4">
               <div className="w-12 h-12 bg-white/40 backdrop-blur-2xl flex justify-center items-center rounded-[14px]">
-                <Image src={tick} width={21} height={32} alt="tick icon" />
+                <Image src={tick} width={21} height={32} alt="tick icon" style={{ width: 'auto', height: '100%' }} />
               </div>
               <div>
                 <h3 className="font-semibold text-[18px]">{feature.title}</h3>
