@@ -137,7 +137,43 @@ export default function RegisterMosqueFlow() {
 
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
+  const normalizeImageUrlForShare = (rawUrl = "") => {
+    if (!rawUrl || typeof rawUrl !== "string") return "";
+
+    const publicApiBase =
+      process.env.NEXT_PUBLIC_API_PUBLIC_URL || process.env.NEXT_PUBLIC_API_URL || "";
+
+    try {
+      const parsed = new URL(rawUrl);
+      const isLocalHost =
+        parsed.hostname === "127.0.0.1" ||
+        parsed.hostname === "localhost" ||
+        parsed.hostname === "0.0.0.0";
+
+      if (!isLocalHost) return rawUrl;
+
+      if (!publicApiBase) return "";
+
+      const publicOrigin = new URL(publicApiBase).origin;
+      return `${publicOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch {
+      if (rawUrl.startsWith("/") && publicApiBase) {
+        try {
+          const publicOrigin = new URL(publicApiBase).origin;
+          return `${publicOrigin}${rawUrl}`;
+        } catch {
+          return "";
+        }
+      }
+      return rawUrl;
+    }
+  };
+
   const buildWhatsAppMessage = (uploadedImageUrl = "") => {
+    const shareableImageUrl = normalizeImageUrlForShare(uploadedImageUrl);
+    const imageLineValue =
+      shareableImageUrl || (prayerTimetableImage ? "Uploaded (link unavailable in local env)" : "Not uploaded");
+
     const lines = [
       "Assalamu Alaikum,",
       "",
@@ -150,7 +186,7 @@ export default function RegisterMosqueFlow() {
       `📍 Area/District: ${formData.area || "-"}`,
       `📝 Additional Info: ${formData.additionalInfo || "-"}`,
       "",
-      `🖼 Prayer Timetable Image: ${uploadedImageUrl || prayerTimetableImage?.name || "Not uploaded"}`,
+      `🖼 Prayer Timetable Image: ${imageLineValue}`,
       "",
       `Facilities: ${formData.facilities.length
         ? formData.facilities.join(", ")
@@ -268,7 +304,7 @@ export default function RegisterMosqueFlow() {
       const url = `https://wa.me/${numericPhone}?text=${text}`;
 
       if (typeof window !== "undefined") {
-        window.open(url, "_blank");
+        window.location.href = url;
       }
 
       setStep(5);

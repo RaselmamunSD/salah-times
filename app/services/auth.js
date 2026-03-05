@@ -221,6 +221,16 @@ export const authService = {
     },
 
     /**
+     * Create Imam user (super-admin only)
+     * @param {Object} imamData - { username, email, first_name, last_name, password, password_confirm, is_active }
+     * @returns {Promise<Object>}
+     */
+    createImam: async (imamData) => {
+        const response = await authAxios.post("/api/auth/create_imam/", imamData);
+        return response.data;
+    },
+
+    /**
      * Delete user account
      * @returns {Promise}
      */
