@@ -463,15 +463,17 @@ export const mosqueService = {
     },
 
     /**
-     * Submit mosque registration request (must NOT use auth token)
-     * @param {Object} payload - Registration payload
-     * @returns {Promise}
+     * Submit mosque registration request.
+     * Goes through the Next.js /api/register-mosque server route so that
+     * Django receives the correct public host header and returns a public image URL.
      */
     registerMosqueRequest: async (payload) => {
+        const token = localStorage.getItem("access_token") || Cookies.get("access_token") || "";
         const isFormData = typeof FormData !== "undefined" && payload instanceof FormData;
-        const response = await publicAxios.post("/api/mosques/register/", payload, isFormData
-            ? { headers: { "Content-Type": "multipart/form-data" } }
-            : undefined);
+        const headers = {};
+        if (isFormData) headers["Content-Type"] = "multipart/form-data";
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        const response = await axios.post("/api/register-mosque", payload, { headers });
         return response.data;
     },
 };

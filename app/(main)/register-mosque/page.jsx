@@ -137,42 +137,27 @@ export default function RegisterMosqueFlow() {
 
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
-  const normalizeImageUrlForShare = (rawUrl = "") => {
-    if (!rawUrl || typeof rawUrl !== "string") return "";
-
-    const publicApiBase =
-      process.env.NEXT_PUBLIC_API_PUBLIC_URL || process.env.NEXT_PUBLIC_API_URL || "";
-
-    try {
-      const parsed = new URL(rawUrl);
-      const isLocalHost =
-        parsed.hostname === "127.0.0.1" ||
-        parsed.hostname === "localhost" ||
-        parsed.hostname === "0.0.0.0";
-
-      if (!isLocalHost) return rawUrl;
-
-      if (!publicApiBase) return "";
-
-      const publicOrigin = new URL(publicApiBase).origin;
-      return `${publicOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`;
-    } catch {
-      if (rawUrl.startsWith("/") && publicApiBase) {
-        try {
-          const publicOrigin = new URL(publicApiBase).origin;
-          return `${publicOrigin}${rawUrl}`;
-        } catch {
-          return "";
-        }
-      }
-      return rawUrl;
-    }
+  /**
+   * Build a publicly shareable image URL.
+   * Uses the /api/media proxy path returned by the server,
+   * prepended with the current browser origin (which is the
+   * public tunnel URL when accessed via Cloudflare tunnel).
+   */
+  const buildShareableImageUrl = (imagePath = "") => {
+    if (!imagePath) return "";
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    if (!origin || origin.match(/localhost|127\.0\.0\.1/)) return "";
+    return `${origin.replace(/\/$/, "")}${imagePath}`;
   };
 
-  const buildWhatsAppMessage = (uploadedImageUrl = "") => {
-    const shareableImageUrl = normalizeImageUrlForShare(uploadedImageUrl);
+
+  const buildWhatsAppMessage = (imagePath = "") => {
+    const shareableImageUrl = buildShareableImageUrl(imagePath);
     const imageLineValue =
-      shareableImageUrl || (prayerTimetableImage ? "Uploaded (link unavailable in local env)" : "Not uploaded");
+      shareableImageUrl ||
+      (prayerTimetableImage
+        ? "✅ Image uploaded — view from the Admin Panel"
+        : "Not uploaded");
 
     const lines = [
       "Assalamu Alaikum,",
@@ -248,7 +233,8 @@ export default function RegisterMosqueFlow() {
           });
         },
         () => resolve({ latitude: null, longitude: null }),
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        // Low accuracy = uses WiFi/cell tower → responds in <1s instead of 5-8s
+        { enableHighAccuracy: false, timeout: 2000, maximumAge: 60000 }
       );
     });
 
@@ -295,12 +281,18 @@ export default function RegisterMosqueFlow() {
 
       const registerResponse = await mosqueService.registerMosqueRequest(formPayload);
 
+      // Use the WhatsApp number returned by the server (set in Django admin → Site Settings)
       const adminNumber =
-        process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "+8801738060329";
+        registerResponse?.registration_whatsapp ||
+        process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ||
+        "+8801738060329";
       const numericPhone = adminNumber.replace(/[^\d]/g, "");
-      const text = encodeURIComponent(
-        buildWhatsAppMessage(registerResponse?.prayer_timetable_image_url || "")
-      );
+
+      // prayer_timetable_image_path is the /api/media/... proxy path returned by
+      // the Next.js server route — buildShareableImageUrl() prepends the current
+      // browser origin to make it a fully public link.
+      const imagePath = registerResponse?.prayer_timetable_image_path || "";
+      const text = encodeURIComponent(buildWhatsAppMessage(imagePath));
       const url = `https://wa.me/${numericPhone}?text=${text}`;
 
       if (typeof window !== "undefined") {
