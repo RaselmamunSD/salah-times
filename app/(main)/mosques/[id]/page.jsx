@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { Inter, Lato } from "next/font/google";
 import { mosqueService } from "../../../services/mosque";
+import WhatsAppShare from "../../../components/shared/WhatsAppShare";
+import MonthlyTimetableModal from "../../../components/shared/MonthlyTimetableModal";
 
 const inter = Inter({ subsets: ["latin"] });
 const lato = Lato({ subsets: ["latin"], weight: ["400", "700", "900"] });
@@ -48,6 +50,7 @@ export default function MosqueDetailsPage() {
   const [error, setError] = useState("");
   const [mosque, setMosque] = useState(null);
   const [prayerData, setPrayerData] = useState(null);
+  const [showMonthly, setShowMonthly] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -316,6 +319,7 @@ export default function MosqueDetailsPage() {
 
                 <button
                   type="button"
+                  onClick={() => setShowMonthly(true)}
                   className="mt-5 inline-flex items-center gap-2 text-[#19749A] text-[29px] font-medium hover:text-[#145e7d] transition-colors"
                 >
                   <CalendarDays size={20} />
@@ -406,6 +410,13 @@ export default function MosqueDetailsPage() {
           </div>
         </div>
 
+        <div className="mt-5 bg-white border border-slate-100 rounded-xl p-4">
+          <WhatsAppShare
+            mosqueName={mosque?.name}
+            message={`Check out ${mosque?.name || "this mosque"} prayer times on Salahtime!\n${typeof window !== "undefined" ? window.location.href : ""}`}
+          />
+        </div>
+
         <div className="mt-5 bg-white border border-slate-100 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
           <div className="text-slate-500 flex items-center gap-2">
             <Clock3 size={15} />
@@ -425,6 +436,14 @@ export default function MosqueDetailsPage() {
           Prayer schedule may vary slightly. Please confirm with mosque management.
         </div>
       </main>
+
+      {showMonthly && (
+        <MonthlyTimetableModal
+          mosqueId={id}
+          mosqueName={mosque?.name}
+          onClose={() => setShowMonthly(false)}
+        />
+      )}
     </div>
   );
 }

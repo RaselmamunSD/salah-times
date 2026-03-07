@@ -30,8 +30,14 @@ const monthName = (monthIndex) =>
 
 const formatTimeShort = (value) => {
   if (!value) return "--:--";
-  const parts = String(value).split(":");
-  return `${parts[0]?.padStart(2, "0") || "--"}:${parts[1]?.padStart(2, "0") || "--"}`;
+  try {
+    const [h, m] = String(value).split(":").map(Number);
+    const period = h < 12 ? "AM" : "PM";
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+  } catch {
+    return "--:--";
+  }
 };
 
 const to12Hour = (timeValue) => {
@@ -78,7 +84,7 @@ export default function FindMosque() {
     longitude: mosque.longitude ? Number(mosque.longitude) : null,
     distanceText: mosque.distance_km ? `${mosque.distance_km} km away` : "N/A",
     nextPrayer: mosque.dhuhr_jamaah
-      ? `Next: Dhuhr - ${to12Hour(formatTimeShort(mosque.dhuhr_jamaah))}`
+      ? `Next: Dhuhr - ${formatTimeShort(mosque.dhuhr_jamaah)}`
       : "Next prayer time unavailable",
   });
 
@@ -200,6 +206,7 @@ export default function FindMosque() {
       const mappedRows = rows.map((row) => ({
         date: `${row.day} ${monthName((row.month || activeMonth + 1) - 1)} ${row.year || activeYear}`,
         fajr: { a: formatTimeShort(row.fajr_adhan), i: formatTimeShort(row.fajr_iqamah) },
+        sunrise: formatTimeShort(row.sunrise),
         dhuhr: { a: formatTimeShort(row.dhuhr_adhan), i: formatTimeShort(row.dhuhr_iqamah) },
         asr: { a: formatTimeShort(row.asr_adhan), i: formatTimeShort(row.asr_iqamah) },
         maghrib: { a: formatTimeShort(row.maghrib_adhan), i: formatTimeShort(row.maghrib_iqamah) },
@@ -516,7 +523,7 @@ export default function FindMosque() {
                         (prayer) => (
                           <th
                             key={prayer}
-                            className="py-2 px-2 font-medium border-r last:border-r-0 border-white/20 w-24"
+                            className="py-2 px-2 font-medium border-r border-white/20 w-24"
                           >
                             <div className="font-bold">{prayer}</div>
                             <div className="text-[10px] text-white/70 font-normal">
@@ -525,6 +532,10 @@ export default function FindMosque() {
                           </th>
                         ),
                       )}
+                      <th className="py-2 px-2 font-medium border-white/20 w-20">
+                        <div className="font-bold">Sunrise</div>
+                        <div className="text-[10px] text-white/70 font-normal">Time</div>
+                      </th>
                     </tr>
                   </thead>
                   {/* Table Body */}
@@ -532,7 +543,7 @@ export default function FindMosque() {
                     {timetableLoading && (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={7}
                           className="py-8 text-sm text-slate-500"
                         >
                           Loading timetable...
@@ -543,7 +554,7 @@ export default function FindMosque() {
                     {!timetableLoading && timetableData.length === 0 && (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={7}
                           className="py-8 text-sm text-slate-500"
                         >
                           No timetable data available for this month.
@@ -568,7 +579,7 @@ export default function FindMosque() {
                         ].map((time, tIdx) => (
                           <td
                             key={tIdx}
-                            className="py-2.5 px-2 border-r last:border-r-0 border-[#D1E5D9]"
+                            className="py-2.5 px-2 border-r border-[#D1E5D9]"
                           >
                             <div className="text-xs text-slate-500 font-medium mb-0.5">
                               {time.a}
@@ -578,6 +589,9 @@ export default function FindMosque() {
                             </div>
                           </td>
                         ))}
+                        <td className="py-2.5 px-2 border-[#D1E5D9]">
+                          <div className="text-xs text-slate-500 font-medium">{row.sunrise}</div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

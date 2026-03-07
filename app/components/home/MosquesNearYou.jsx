@@ -19,8 +19,14 @@ const monthName = (monthIndex) =>
 
 const formatTimeShort = (value) => {
   if (!value) return "--:--";
-  const parts = String(value).split(":");
-  return `${parts[0]?.padStart(2, "0") || "--"}:${parts[1]?.padStart(2, "0") || "--"}`;
+  try {
+    const [h, m] = String(value).split(":").map(Number);
+    const period = h < 12 ? "AM" : "PM";
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+  } catch {
+    return "--:--";
+  }
 };
 
 const MosquesNearYou = ({ currentLocation, refreshKey }) => {
@@ -61,15 +67,32 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
             ? response.results
             : [];
 
-        const formatted = items.slice(0, 6).map((mosque) => ({
-          id: mosque.id,
-          name: mosque.name,
-          location: mosque.city_name || mosque.address || "Dhaka",
-          distance: mosque.distance_km ? mosque.distance_km.toFixed(1) : "2.3",
-          prayer: "Dhuhr",
-          time: "12:30 PM",
-          isFavorite: favoriteIds.has(mosque.id),
-        }));
+        const formatted = await Promise.all(
+          items.slice(0, 6).map(async (mosque) => {
+            let prayer = null;
+            let time = null;
+            try {
+              const pt = await mosqueService.getPrayerTimes(mosque.id);
+              const idx = pt?.next_prayer_index;
+              if (pt?.prayer_times && idx != null) {
+                const next = pt.prayer_times[idx];
+                prayer = next?.name || null;
+                time = next?.jamaah || next?.time || null;
+              }
+            } catch {
+              // leave null
+            }
+            return {
+              id: mosque.id,
+              name: mosque.name,
+              location: mosque.city_name || mosque.address || "Dhaka",
+              distance: mosque.distance_km ? mosque.distance_km.toFixed(1) : "2.3",
+              prayer,
+              time,
+              isFavorite: favoriteIds.has(mosque.id),
+            };
+          })
+        );
 
         setMosques(formatted);
       } catch {
@@ -103,6 +126,7 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
       const mappedRows = rows.map((row) => ({
         date: `${row.day} ${monthName((row.month || activeMonth + 1) - 1)} ${row.year || activeYear}`,
         fajr: { a: formatTimeShort(row.fajr_adhan), i: formatTimeShort(row.fajr_iqamah) },
+        sunrise: formatTimeShort(row.sunrise),
         dhuhr: { a: formatTimeShort(row.dhuhr_adhan), i: formatTimeShort(row.dhuhr_iqamah) },
         asr: { a: formatTimeShort(row.asr_adhan), i: formatTimeShort(row.asr_iqamah) },
         maghrib: { a: formatTimeShort(row.maghrib_adhan), i: formatTimeShort(row.maghrib_iqamah) },
@@ -270,7 +294,7 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
                         (prayer) => (
                           <th
                             key={prayer}
-                            className="py-2 px-2 font-medium border-r last:border-r-0 border-white/20 w-24"
+                            className="py-2 px-2 font-medium border-r border-white/20 w-24"
                           >
                             <div className="font-bold">{prayer}</div>
                             <div className="text-[10px] text-white/70 font-normal">
@@ -279,12 +303,16 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
                           </th>
                         )
                       )}
+                      <th className="py-2 px-2 font-medium border-white/20 w-20">
+                        <div className="font-bold">Sunrise</div>
+                        <div className="text-[10px] text-white/70 font-normal">Time</div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {timetableLoading && (
                       <tr>
-                        <td colSpan={6} className="py-8 text-sm text-slate-500">
+                        <td colSpan={7} className="py-8 text-sm text-slate-500">
                           Loading timetable...
                         </td>
                       </tr>
@@ -292,7 +320,7 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
 
                     {!timetableLoading && timetableData.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="py-8 text-sm text-slate-500">
+                        <td colSpan={7} className="py-8 text-sm text-slate-500">
                           No timetable data available for this month.
                         </td>
                       </tr>
@@ -322,6 +350,9 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
                             </div>
                           </td>
                         ))}
+                        <td className="py-2.5 px-2 border-r border-[#D1E5D9]">
+                          <div className="text-xs text-slate-500 font-medium">{row.sunrise}</div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

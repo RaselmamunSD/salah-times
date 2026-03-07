@@ -26,7 +26,7 @@ const TimeSection = ({ currentLocation, refreshKey }) => {
     const fetchPrayerTimes = async () => {
       try {
         setLoading(true);
-        let mosqueId = 1;
+        let mosqueId = null;
 
         if (currentLocation?.latitude && currentLocation?.longitude) {
           const nearbyMosques = await mosqueService.getNearby(
@@ -38,6 +38,18 @@ const TimeSection = ({ currentLocation, refreshKey }) => {
           if (Array.isArray(nearbyMosques) && nearbyMosques.length > 0) {
             mosqueId = nearbyMosques[0].id;
           }
+        }
+
+        // Fallback: pick the first available verified mosque
+        if (!mosqueId) {
+          const list = await mosqueService.list({ is_verified: true, limit: 1 });
+          const items = Array.isArray(list) ? list : (list?.results ?? []);
+          if (items.length > 0) mosqueId = items[0].id;
+        }
+
+        if (!mosqueId) {
+          setError("No mosque data available");
+          return;
         }
 
         const data = await mosqueService.getPrayerTimes(mosqueId);
@@ -100,7 +112,7 @@ const TimeSection = ({ currentLocation, refreshKey }) => {
             <div>
               <h1 className="text-[24px] font-semibold mb-[3px] flex items-center gap-2 flex-wrap">
                 <span>Today&apos;s</span>
-                <div className="flex items-center gap-2">
+                <span className="flex items-center gap-2">
                   <button className="text-[#1F8A5B] hover:opacity-70 transition-opacity">
                     <ChevronLeft size={20} />
                   </button>
@@ -110,7 +122,7 @@ const TimeSection = ({ currentLocation, refreshKey }) => {
                   <button className="text-[#1F8A5B] hover:opacity-70 transition-opacity">
                     <ChevronRight size={20} />
                   </button>
-                </div>
+                </span>
                 <span>Prayer Times</span>
               </h1>
               <p

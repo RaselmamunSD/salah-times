@@ -139,20 +139,24 @@ export default function RegisterMosqueFlow() {
 
   /**
    * Build a publicly shareable image URL.
-   * Uses the /api/media proxy path returned by the server,
-   * prepended with the current browser origin (which is the
-   * public tunnel URL when accessed via Cloudflare tunnel).
+   * Only returns the URL if it points to a publicly reachable host.
+   * localhost / 127.0.0.1 URLs cannot be opened by WhatsApp recipients.
    */
-  const buildShareableImageUrl = (imagePath = "") => {
-    if (!imagePath) return "";
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    if (!origin || origin.match(/localhost|127\.0\.0\.1/)) return "";
-    return `${origin.replace(/\/$/, "")}${imagePath}`;
+  const buildShareableImageUrl = (url = "") => {
+    if (!url) return "";
+    try {
+      const { hostname } = new URL(url);
+      if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]") {
+        return "";
+      }
+    } catch {
+      return "";
+    }
+    return url;
   };
 
-
-  const buildWhatsAppMessage = (imagePath = "") => {
-    const shareableImageUrl = buildShareableImageUrl(imagePath);
+  const buildWhatsAppMessage = (imageUrl = "") => {
+    const shareableImageUrl = buildShareableImageUrl(imageUrl);
     const imageLineValue =
       shareableImageUrl ||
       (prayerTimetableImage
@@ -259,6 +263,28 @@ export default function RegisterMosqueFlow() {
     try {
       const { latitude, longitude } = await getCurrentCoordinates();
 
+      // ── Step 1: Upload the prayer timetable image FIRST via the dedicated
+      //   proxy route so we get a guaranteed public URL. This is independent
+      //   of the mosque registration call so the URL is always available.
+      let sharedImageUrl = "";
+      if (prayerTimetableImage) {
+        try {
+          const imgForm = new FormData();
+          imgForm.append("image", prayerTimetableImage);
+          const imgRes = await fetch("/api/share-image", {
+            method: "POST",
+            body: imgForm,
+          });
+          if (imgRes.ok) {
+            const imgData = await imgRes.json();
+            sharedImageUrl = imgData.image_url || "";
+          }
+        } catch {
+          // Non-fatal — fall back to the "uploaded" notice below
+        }
+      }
+
+      // ── Step 2: Register the mosque (still sends the image for admin use)
       const formPayload = new FormData();
       formPayload.append("mosque_name", formData.mosqueName);
       formPayload.append("contact_person", formData.contactPerson || "");
@@ -288,11 +314,9 @@ export default function RegisterMosqueFlow() {
         "+8801738060329";
       const numericPhone = adminNumber.replace(/[^\d]/g, "");
 
-      // prayer_timetable_image_path is the /api/media/... proxy path returned by
-      // the Next.js server route — buildShareableImageUrl() prepends the current
-      // browser origin to make it a fully public link.
-      const imagePath = registerResponse?.prayer_timetable_image_path || "";
-      const text = encodeURIComponent(buildWhatsAppMessage(imagePath));
+      // ── Step 3: Build message. Use the image URL from Step 1 directly —
+      //   it is always a public URL (or "" if upload failed / on localhost).
+      const text = encodeURIComponent(buildWhatsAppMessage(sharedImageUrl));
       const url = `https://wa.me/${numericPhone}?text=${text}`;
 
       if (typeof window !== "undefined") {

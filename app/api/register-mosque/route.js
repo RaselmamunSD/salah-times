@@ -42,15 +42,18 @@ export async function POST(request) {
         const data = await djangoResponse.json();
 
         // Replace the media host in the returned image URL with our own proxy path.
-        // This ensures the link is always accessible via Next.js regardless of
-        // whether the original URL points to 127.0.0.1 or a tunnel.
+        // Build a fully-qualified public URL using the incoming request's host so
+        // the link works in WhatsApp regardless of whether Django is on localhost.
         if (data.prayer_timetable_image_url) {
             try {
                 const parsed = new URL(data.prayer_timetable_image_url);
                 const match = parsed.pathname.match(/^\/media\/(.+)$/);
                 if (match) {
-                    // Return a relative path — the frontend will prepend window.location.origin
+                    // Relative path (kept for backward compat)
                     data.prayer_timetable_image_path = `/api/media/${match[1]}`;
+                    // Fully-qualified public URL — use the incoming host so the
+                    // link is always reachable (tunnel, production domain, etc.)
+                    data.prayer_timetable_image_shareable_url = `${incomingProto}://${incomingHost}/api/media/${match[1]}`;
                 }
             } catch {
                 // keep original
