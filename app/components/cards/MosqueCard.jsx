@@ -83,9 +83,7 @@ const MosqueCard = ({ mosque, onFavoriteChanged, onViewMonthlyTimetable }) => {
           <Clock size={14} className="flex-shrink-0" />
           <span>Next:</span>
           <span className="text-[#1E293B] font-medium">
-            {mosque.prayer && mosque.time
-              ? `${mosque.prayer} - ${mosque.time}`
-              : "No data"}
+            {mosque.prayer} - {mosque.time}
           </span>
         </div>
 

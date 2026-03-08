@@ -67,32 +67,15 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
             ? response.results
             : [];
 
-        const formatted = await Promise.all(
-          items.slice(0, 6).map(async (mosque) => {
-            let prayer = null;
-            let time = null;
-            try {
-              const pt = await mosqueService.getPrayerTimes(mosque.id);
-              const idx = pt?.next_prayer_index;
-              if (pt?.prayer_times && idx != null) {
-                const next = pt.prayer_times[idx];
-                prayer = next?.name || null;
-                time = next?.jamaah || next?.time || null;
-              }
-            } catch {
-              // leave null
-            }
-            return {
-              id: mosque.id,
-              name: mosque.name,
-              location: mosque.city_name || mosque.address || "Dhaka",
-              distance: mosque.distance_km ? mosque.distance_km.toFixed(1) : "2.3",
-              prayer,
-              time,
-              isFavorite: favoriteIds.has(mosque.id),
-            };
-          })
-        );
+        const formatted = items.slice(0, 6).map((mosque) => ({
+          id: mosque.id,
+          name: mosque.name,
+          location: mosque.city_name || mosque.address || "Dhaka",
+          distance: mosque.distance_km ? mosque.distance_km.toFixed(1) : "2.3",
+          prayer: "Dhuhr",
+          time: "12:30 PM",
+          isFavorite: favoriteIds.has(mosque.id),
+        }));
 
         setMosques(formatted);
       } catch {
