@@ -1,5 +1,6 @@
 import Image from "next/image";
 import React from "react";
+import Link from "next/link";
 import mosqueIcon from "../../../public/icons/mosque.png";
 import EmptyStar from "../icons/EmptyStar";
 import { Inter, Poppins } from "next/font/google";
@@ -62,10 +63,10 @@ const MosqueCard = ({ mosque, onFavoriteChanged, onViewMonthlyTimetable }) => {
       {/* Mosque Details */}
       <div>
         {/* Mosque Name */}
-        <h3
-          className={`text-base text-[#1E293B] font-semibold ${poppins.className} mb-2 line-clamp-2`}
-        >
-          {mosque.name}
+        <h3 className={`text-base text-[#1E293B] font-semibold ${poppins.className} mb-2 line-clamp-2`}>
+          <Link href={`/mosques/${mosque.id}`} className="hover:text-[#1F8A5B] transition-colors">
+            {mosque.name}
+          </Link>
         </h3>
 
         {/* Location and Distance */}

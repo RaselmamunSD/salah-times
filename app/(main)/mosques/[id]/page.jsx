@@ -1,27 +1,24 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import {
   Bell,
   Calendar,
-  CalendarDays,
   ChevronRight,
-  Clock4,
   Clock3,
-  ExternalLink,
   Mail,
   MapPin,
   Phone,
-  Megaphone,
 } from "lucide-react";
-import { Inter, Lato } from "next/font/google";
+import { Inter, Poppins } from "next/font/google";
+import mosqueIcon from "../../../../public/icons/mosque.png";
 import { mosqueService } from "../../../services/mosque";
-import WhatsAppShare from "../../../components/shared/WhatsAppShare";
 import MonthlyTimetableModal from "../../../components/shared/MonthlyTimetableModal";
 
 const inter = Inter({ subsets: ["latin"] });
-const lato = Lato({ subsets: ["latin"], weight: ["400", "700", "900"] });
+const poppins = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
 const TABS = [
   { id: "prayer", label: "Prayer Times" },
@@ -29,8 +26,6 @@ const TABS = [
   { id: "announcements", label: "Announcements" },
   { id: "contact", label: "Contact" },
 ];
-
-const toDisplay = (value) => (value && String(value).trim() ? value : "--");
 
 const formatBackendTime = (value) => {
   if (!value) return "--";
@@ -43,8 +38,31 @@ const formatBackendTime = (value) => {
   return `${normalized}:${String(minute).slice(0, 2).padStart(2, "0")} ${suffix}`;
 };
 
+const prayerMeta = {
+  Fajr: { label: "Beginning Time", fallback: "fajr_beginning", fallbackJamaah: "fajr_jamaah" },
+  Sunrise: { label: "Time", fallback: "sunrise", fallbackJamaah: null },
+  Dhuhr: { label: "Beginning Time", fallback: "dhuhr_beginning", fallbackJamaah: "dhuhr_jamaah" },
+  Asr: { label: "Beginning Time", fallback: "asr_beginning", fallbackJamaah: "asr_jamaah" },
+  Maghrib: { label: "Sunset Time", fallback: "maghrib_sunset", fallbackJamaah: "maghrib_jamaah" },
+  Isha: { label: "Beginning Time", fallback: "isha_beginning", fallbackJamaah: "isha_jamaah" },
+};
+
+const defaultAnnouncements = [
+  {
+    title: "Jumu'ah Khutbah Schedule",
+    body: "First Jumu'ah: 12:30 PM, Second Jumu'ah: 1:30 PM",
+    date: "Every Friday",
+  },
+  {
+    title: "Ramadan Preparation",
+    body: "Special arrangements for Taraweeh prayers will be announced soon.",
+    date: "Community Notice",
+  },
+];
+
 export default function MosqueDetailsPage() {
   const { id } = useParams();
+
   const [activeTab, setActiveTab] = useState("prayer");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -60,19 +78,17 @@ export default function MosqueDetailsPage() {
       setError("");
 
       try {
-        const [mosqueDetails, prayerTimes] = await Promise.all([
+        const [mosqueDetails, todayPrayer] = await Promise.all([
           mosqueService.get(id),
           mosqueService.getPrayerTimes(id).catch(() => null),
         ]);
 
         if (!mounted) return;
         setMosque(mosqueDetails || null);
-        setPrayerData(prayerTimes || null);
+        setPrayerData(todayPrayer || null);
       } catch (err) {
         if (!mounted) return;
-        setError(
-          err?.response?.data?.detail || "Unable to load mosque details right now."
-        );
+        setError(err?.response?.data?.detail || "Unable to load mosque details right now.");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -86,74 +102,56 @@ export default function MosqueDetailsPage() {
   }, [id]);
 
   const prayerRows = useMemo(() => {
-    const REQUIRED_PRAYERS = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
+    const order = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
-    if (
-      Array.isArray(prayerData?.prayer_times) &&
-      prayerData.prayer_times.length >= 6
-    ) {
-      return REQUIRED_PRAYERS.map((prayerName) => {
-        const item = prayerData.prayer_times.find(p => p?.name === prayerName);
+    if (Array.isArray(prayerData?.prayer_times) && prayerData.prayer_times.length) {
+      return order.map((name) => {
+        const item = prayerData.prayer_times.find((p) => p?.name === name);
 
         if (!item) {
-          return {
-            name: prayerName,
-            beginning: "--",
-            jamaah: "--",
-          };
+          return { name, beginning: "--", jamaah: "--" };
         }
 
-        if (item?.name === "Sunrise") {
+        if (name === "Sunrise") {
           return {
-            name: "Sunrise",
-            beginning: toDisplay(item.time),
+            name,
+            beginning: item.time || "--",
             jamaah: "-",
           };
         }
 
         return {
-          name: item?.name,
-          beginning: toDisplay(item?.beginning || item?.sunset),
-          jamaah: toDisplay(item?.jamaah),
+          name,
+          beginning: item.beginning || item.sunset || "--",
+          jamaah: item.jamaah || "--",
         };
       });
     }
 
-    // Fallback to mosque data
-    if (!mosque) return [];
+    return order.map((name) => {
+      const meta = prayerMeta[name];
+      const beginning = mosque?.[meta.fallback] ? formatBackendTime(mosque[meta.fallback]) : "--";
+      const jamaah = meta.fallbackJamaah
+        ? (mosque?.[meta.fallbackJamaah] ? formatBackendTime(mosque[meta.fallbackJamaah]) : "--")
+        : "-";
 
-    return [
-      { name: "Fajr", beginning: formatBackendTime(mosque.fajr_beginning), jamaah: formatBackendTime(mosque.fajr_jamaah) },
-      { name: "Sunrise", beginning: formatBackendTime(mosque.sunrise), jamaah: "-" },
-      { name: "Dhuhr", beginning: formatBackendTime(mosque.dhuhr_beginning), jamaah: formatBackendTime(mosque.dhuhr_jamaah) },
-      { name: "Asr", beginning: formatBackendTime(mosque.asr_beginning), jamaah: formatBackendTime(mosque.asr_jamaah) },
-      { name: "Maghrib", beginning: formatBackendTime(mosque.maghrib_sunset), jamaah: formatBackendTime(mosque.maghrib_jamaah) },
-      { name: "Isha", beginning: formatBackendTime(mosque.isha_beginning), jamaah: formatBackendTime(mosque.isha_jamaah) },
-    ];
+      return { name, beginning, jamaah };
+    });
   }, [mosque, prayerData]);
-  const announcements = useMemo(() => {
-    const rows = [];
-    if (mosque?.additional_info) {
-      rows.push({
-        title: "Mosque Announcement",
-        text: mosque.additional_info,
-        date: "Recently updated",
-      });
-    }
-    if (mosque?.updated_at) {
-      const dateText = new Date(mosque.updated_at).toLocaleDateString("en-US", {
+
+  const nextPrayerName = prayerData?.next_prayer_name || null;
+  const nextPrayerTimeLeft = prayerData?.time_until_next || null;
+
+  const todayText = useMemo(
+    () =>
+      new Date().toLocaleDateString("en-US", {
+        weekday: "long",
         year: "numeric",
-        month: "short",
+        month: "long",
         day: "numeric",
-      });
-      rows.push({
-        title: "Profile Updated",
-        text: "Mosque profile information was updated by the admin.",
-        date: dateText,
-      });
-    }
-    return rows;
-  }, [mosque?.additional_info, mosque?.updated_at]);
+      }),
+    []
+  );
 
   const mapCenter = useMemo(() => {
     const latitude = Number(mosque?.latitude);
@@ -167,78 +165,89 @@ export default function MosqueDetailsPage() {
   }, [mosque?.latitude, mosque?.longitude]);
 
   const mapEmbedUrl = useMemo(() => {
-    const delta = 0.05;
-    const left = mapCenter.longitude - delta;
-    const right = mapCenter.longitude + delta;
-    const top = mapCenter.latitude + delta;
-    const bottom = mapCenter.latitude - delta;
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${left}%2C${bottom}%2C${right}%2C${top}&layer=mapnik&marker=${mapCenter.latitude}%2C${mapCenter.longitude}`;
+    return `https://maps.google.com/maps?q=${mapCenter.latitude},${mapCenter.longitude}&z=15&output=embed`;
   }, [mapCenter.latitude, mapCenter.longitude]);
 
-  const mapLargerUrl = useMemo(
-    () =>
-      `https://www.openstreetmap.org/?mlat=${mapCenter.latitude}&mlon=${mapCenter.longitude}#map=14/${mapCenter.latitude}/${mapCenter.longitude}`,
+  const directionsUrl = useMemo(
+    () => `https://www.google.com/maps/dir/?api=1&destination=${mapCenter.latitude},${mapCenter.longitude}`,
     [mapCenter.latitude, mapCenter.longitude]
   );
 
-  const todayText = useMemo(
-    () =>
-      new Date().toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-    []
+  const mapLargerUrl = useMemo(
+    () => `https://www.google.com/maps?q=${mapCenter.latitude},${mapCenter.longitude}&z=15`,
+    [mapCenter.latitude, mapCenter.longitude]
   );
 
-  return (
-    <div className="min-h-screen bg-[#F2F6F8] pb-16">
-      <div className="py-[120px] text-center bg-gradient-to-b from-[#1F8A5B] to-[#1F6F8B] w-full">
-        <h1 className={`font-bold text-3xl md:text-5xl text-white ${lato.className}`}>
-          <span className="text-[#26FFA0] italic">{mosque?.name || "Mosque Details"}</span>
-        </h1>
-        <p className={`text-[#D0E0FF] ${inter.className} mt-3 flex items-center justify-center gap-2`}>
-          <MapPin size={15} />
-          {mosque?.city_name || "Dhaka"}
-        </p>
-      </div>
+  const announcements = useMemo(() => {
+    const dynamic = [];
 
-      <main className="max-w-6xl mx-auto px-4 -mt-10">
-        <div className="mb-6 rounded-[14px] border border-[#B5D8C7] bg-[#EDF6F3] px-4 md:px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+    if (mosque?.additional_info) {
+      dynamic.push({
+        title: "Mosque Update",
+        body: mosque.additional_info,
+        date: mosque?.updated_at
+          ? new Date(mosque.updated_at).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
+          : "Recent",
+      });
+    }
+
+    return dynamic.length ? dynamic : defaultAnnouncements;
+  }, [mosque?.additional_info, mosque?.updated_at]);
+
+  return (
+    <div className={`min-h-screen bg-[#F2F4F6] pb-10 ${inter.className}`}>
+      <section className="bg-gradient-to-b from-[#1D8A58] to-[#1E6F8D] text-white pt-28 pb-16">
+        <div className="max-w-5xl mx-auto px-4 text-center">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-white/15 flex items-center justify-center">
+            <Image src={mosqueIcon} alt="Mosque" width={42} height={42} className="brightness-0 invert" />
+          </div>
+          <h1 className={`text-3xl md:text-[48px] leading-tight font-semibold ${poppins.className}`}>
+            <span className="text-[#52FFB6] italic">{mosque?.name || "Mosque"}</span>{" "}
+            <span>National Mosque</span>
+          </h1>
+          <p className="mt-3 flex items-center justify-center gap-1 text-[#D9E9F1]">
+            <MapPin size={14} />
+            <span>{mosque?.city_name || "Dhaka"}</span>
+          </p>
+        </div>
+      </section>
+
+      <main className="max-w-5xl mx-auto px-4 -mt-3 md:-mt-5">
+        <div className="rounded-xl border border-[#CFE3DA] bg-[#ECF6F2] p-3 md:p-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-[#1E8A5E] text-white flex items-center justify-center">
-              <Bell size={20} />
+            <div className="w-9 h-9 rounded-lg bg-[#1E8A5E] text-white flex items-center justify-center">
+              <Bell size={16} />
             </div>
             <div>
-              <p className="text-[25px] font-bold leading-tight text-[#263342]">
-                Get Prayer Time Notifications
-              </p>
-              <p className="text-[18px] text-[#7B8CA3] mt-1">
-                Subscribe to receive updates from this mosque
-              </p>
+              <p className="text-sm md:text-base font-semibold text-[#1E2A39]">Get Prayer Time Notifications</p>
+              <p className="text-xs md:text-sm text-[#62758C]">Subscribe to receive updates from this mosque</p>
             </div>
           </div>
           <button
             type="button"
-            className="bg-[#1E8A5E] text-white text-[17px] font-semibold px-9 py-3 rounded-xl inline-flex items-center gap-1.5 hover:bg-[#18724d] transition-colors"
+            className="bg-[#1E8A5E] text-white text-xs md:text-sm font-medium px-4 py-2 rounded-lg inline-flex items-center gap-1 hover:bg-[#19724d] transition-colors"
           >
-            Subscribe <ChevronRight size={15} />
+            Subscribe <ChevronRight size={14} />
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_18px_45px_rgba(15,23,42,0.06)] overflow-hidden">
-          <div className="border-b border-slate-200 px-2 md:px-4">
-            <div className="flex items-center gap-1 md:gap-2 overflow-x-auto pt-3">
+        <section className="mt-3 rounded-xl border border-[#DDE5EA] bg-white overflow-hidden">
+          <div className="border-b border-[#E6EDF2] px-2 md:px-3">
+            <div className="flex overflow-x-auto">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-3 text-[17px] font-medium whitespace-nowrap border-b-2 transition-colors ${activeTab === tab.id
-                    ? "border-[#2B9B6B] text-[#2B9B6B]"
-                    : "border-transparent text-[#607289] hover:text-[#2B9B6B]"
-                    }`}
+                  className={`px-4 py-3 text-xs md:text-sm border-b-2 whitespace-nowrap transition-colors ${
+                    activeTab === tab.id
+                      ? "border-[#2A9D6B] text-[#2A9D6B]"
+                      : "border-transparent text-[#64748B] hover:text-[#2A9D6B]"
+                  }`}
                 >
                   {tab.label}
                 </button>
@@ -246,68 +255,63 @@ export default function MosqueDetailsPage() {
             </div>
           </div>
 
-          <div className="p-4 md:p-6 min-h-[520px]">
+          <div className="p-4 md:p-5 min-h-[420px]">
             {loading && <p className="text-sm text-slate-500">Loading mosque details...</p>}
             {!loading && error && <p className="text-sm text-red-500">{error}</p>}
 
             {!loading && !error && activeTab === "prayer" && (
               <div>
-                <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+                <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
                   <div>
-                    <h2 className="text-[44px] font-bold text-[#263342] leading-tight">
+                    <h2 className={`text-xl md:text-2xl font-semibold text-[#1E293B] ${poppins.className}`}>
                       Today&apos;s Prayer Times
                     </h2>
-                    <p className="mt-2 text-[22px] text-[#7B8CA3] flex items-center gap-2">
-                      <Calendar size={16} />
+                    <p className="mt-1 text-xs md:text-sm text-[#6B7C93] inline-flex items-center gap-1">
+                      <Calendar size={14} />
                       {todayText}
                     </p>
                   </div>
-                  <div className="text-right pt-1">
-                    <p className="text-[20px] text-[#97A3B6]">Next Prayer</p>
-                    <p className="text-[37px] font-bold text-[#1E8A5E] leading-tight">
-                      {prayerData?.next_prayer_name
-                        ? `${prayerData.next_prayer_name} in ${prayerData?.time_until_next || "-"}`
-                        : "Updating..."}
+                  <div className="text-right">
+                    <p className="text-xs uppercase tracking-wide text-[#8FA0B5]">Next Prayer</p>
+                    <p className="text-base md:text-xl font-semibold text-[#1E8A5E]">
+                      {nextPrayerName ? `${nextPrayerName} in ${nextPrayerTimeLeft || "-"}` : "Updating..."}
                     </p>
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  {prayerRows.map((row, index) => {
-                    const isNextPrayer = prayerData?.next_prayer_index === index;
+                <div className="space-y-2.5">
+                  {prayerRows.map((row) => {
+                    const isNext = nextPrayerName === row.name;
+                    const meta = prayerMeta[row.name] || prayerMeta.Fajr;
+                    const isSunrise = row.name === "Sunrise";
+                    const rightValue = isSunrise ? row.beginning : row.jamaah;
+                    const subtitle = isSunrise
+                      ? "No Iqamah for Sunrise"
+                      : `${meta.label}: ${row.beginning}`;
 
                     return (
                       <div
-                        key={`${row.name}-${index}`}
-                        className={`rounded-2xl border px-6 py-4 flex items-center justify-between gap-4 ${isNextPrayer
-                          ? "bg-[#EAF4F1] border-[#2B9B6B] shadow-[inset_0_0_0_1px_rgba(43,155,107,0.12)]"
-                          : "bg-white border-[#E2E8F0]"
-                          }`}
+                        key={row.name}
+                        className={`rounded-lg border p-3 md:p-4 flex items-center justify-between ${
+                          isNext ? "bg-[#ECF8F2] border-[#2A9D6B]" : "bg-white border-[#E5ECF1]"
+                        }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isNextPrayer ? "bg-[#1E8A5E] text-white" : "bg-[#F1F5F9] text-[#6B7F99]"}`}>
-                            <Clock4 size={18} />
-                          </div>
-                          <div>
-                            <p className="text-[32px] font-bold text-[#263342] leading-tight">{row.name}</p>
-                            <p className="text-[16px] text-[#7588A0] mt-1">
-                              {row.name === "Maghrib" ? "Sunset Time" : "Beginning Time"}: {row.beginning}
-                            </p>
-                          </div>
+                        <div>
+                          <p className="font-semibold text-[#1F2B3A]">{row.name}</p>
+                          <p className="text-xs text-[#74879D] mt-0.5">
+                            {subtitle}
+                          </p>
                         </div>
 
                         <div className="text-right">
-                          <p
-                            className={`font-bold leading-none ${isNextPrayer ? "text-[32px] text-[#1E8A5E]" : "text-[32px] text-[#263342]"
-                              }`}
-                          >
-                            {row.jamaah}
+                          <p className={`text-lg md:text-2xl font-semibold ${isNext ? "text-[#1E8A5E]" : "text-[#223243]"}`}>
+                            {rightValue}
                           </p>
-                          <p className="text-[15px] text-[#7B8CA3] mt-1">
-                            {row.jamaah !== "-" ? "Iqamah" : ""}
+                          <p className="text-[11px] text-[#8AA0B6]">
+                            {!isSunrise && row.jamaah !== "-" ? "Iqamah" : ""}
                           </p>
-                          {isNextPrayer && (
-                            <span className="inline-flex mt-2 bg-[#1E8A5E] text-white text-[12px] font-semibold px-3 py-1 rounded-full">
+                          {isNext && (
+                            <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-[#1E8A5E] text-white">
                               Next Prayer
                             </span>
                           )}
@@ -320,120 +324,101 @@ export default function MosqueDetailsPage() {
                 <button
                   type="button"
                   onClick={() => setShowMonthly(true)}
-                  className="mt-5 inline-flex items-center gap-2 text-[#19749A] text-[29px] font-medium hover:text-[#145e7d] transition-colors"
+                  className="mt-3 text-sm text-[#1A6F93] hover:text-[#13536e] font-medium"
                 >
-                  <CalendarDays size={20} />
                   View Monthly Timetable
                 </button>
               </div>
             )}
 
             {!loading && !error && activeTab === "location" && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-bold text-slate-800">Location & Directions</h2>
-                <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
-                  <p className="font-semibold text-slate-800 mb-1">Address</p>
-                  <p>{mosque?.address || "Address not available."}</p>
+              <div>
+                <h2 className={`text-lg font-semibold text-[#1E293B] mb-3 ${poppins.className}`}>Location & Directions</h2>
+                <div className="mb-3 text-sm">
+                  <p className="text-[#1F2E3E] font-medium mb-1 inline-flex items-center gap-1.5">
+                    <MapPin size={14} className="text-[#2A9D6B]" />
+                    Address
+                  </p>
+                  <p className="text-[#1F2E3E]">{mosque?.address || "Dhaka, Bangladesh"}</p>
                 </div>
-                <div className="h-[360px] rounded-xl overflow-hidden border border-slate-200 relative">
+
+                <div className="relative h-[340px] md:h-[420px] rounded-lg overflow-hidden border border-[#E3EBF0] bg-slate-100">
                   <iframe
-                    title="Mosque location map"
+                    title="Mosque map"
                     src={mapEmbedUrl}
-                    className="absolute inset-0 w-full h-full border-0"
+                    className="w-full h-full border-0"
                     loading="lazy"
                   />
+                  <a
+                    href={mapLargerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute top-3 left-3 z-10 rounded bg-white/95 px-2.5 py-1.5 text-[13px] font-medium text-[#1A73E8] shadow-sm hover:underline"
+                  >
+                    View larger map
+                  </a>
                 </div>
+
                 <a
-                  href={mapLargerUrl}
+                  href={directionsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 bg-[#1E8A5E] text-white text-sm font-semibold px-4 py-2 rounded-md hover:bg-[#186e4a] transition-colors"
+                  className="mt-3 w-full inline-flex items-center justify-center bg-[#1E8A5E] text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-[#19724d]"
                 >
-                  Open Large Map <ExternalLink size={14} />
+                  Get Directions
                 </a>
               </div>
             )}
 
             {!loading && !error && activeTab === "announcements" && (
               <div>
-                <h2 className="text-lg font-bold text-slate-800 mb-4">Recent Announcements</h2>
-                {announcements.length === 0 ? (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
-                    No announcements available yet.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {announcements.map((item, idx) => (
-                      <div key={`${item.title}-${idx}`} className="rounded-xl border border-slate-200 p-4">
-                        <div className="flex items-center justify-between gap-3 mb-1">
-                          <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-                            <Megaphone size={15} className="text-[#1E8A5E]" />
-                            {item.title}
-                          </h3>
-                          <span className="text-xs text-slate-400">{item.date}</span>
+                <h2 className={`text-lg font-semibold text-[#1E293B] mb-3 ${poppins.className}`}>Recent Announcements</h2>
+                <div className="space-y-3">
+                  {announcements.map((item, idx) => (
+                    <div key={`${item.title}-${idx}`} className="rounded-lg border border-[#D9E6EF] bg-[#EEF5FA] p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-[#223447]">{item.title}</p>
+                          <p className="text-sm text-[#5E738A] mt-1">{item.body}</p>
                         </div>
-                        <p className="text-sm text-slate-600">{item.text}</p>
+                        <span className="text-[11px] text-[#7E91A6] whitespace-nowrap">{item.date}</span>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {!loading && !error && activeTab === "contact" && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-bold text-slate-800">Contact Information</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h2 className={`text-lg font-semibold text-[#1E293B] mb-4 ${poppins.className}`}>Contact Information</h2>
 
-                  <div className="rounded-xl border border-slate-200 p-4 bg-slate-50">
-                    <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">
-                      Phone
-                    </p>
-                    <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                      <Phone size={14} className="text-[#1E8A5E]" />
-                      {mosque?.phone || "Not provided"}
-                    </p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-[#24384B]">
+                    <Phone size={14} className="text-[#1E8A5E]" />
+                    <span>{mosque?.phone || "+880 0000000000"}</span>
                   </div>
-                  <div className="rounded-xl border border-slate-200 p-4 bg-slate-50">
-                    <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">
-                      Email
-                    </p>
-                    <p className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                      <Mail size={14} className="text-[#1E8A5E]" />
-                      {mosque?.email || "Not provided"}
-                    </p>
+                  <div className="flex items-center gap-2 text-sm text-[#24384B]">
+                    <Mail size={14} className="text-[#1E8A5E]" />
+                    <span>{mosque?.email || "info@mosque.org"}</span>
                   </div>
+                </div>
 
+                <div className="mt-5 border-t border-[#E7EDF2] pt-4">
+                  <h3 className="text-sm font-semibold text-[#263A4E] mb-1">About This Mosque</h3>
+                  <p className="text-sm text-[#63788F]">
+                    {mosque?.additional_info ||
+                      "This mosque serves the local community with regular daily prayers, Jumu'ah congregation and Islamic learning activities."}
+                  </p>
                 </div>
               </div>
             )}
           </div>
-        </div>
+        </section>
 
-        <div className="mt-5 bg-white border border-slate-100 rounded-xl p-4">
-          <WhatsAppShare
-            mosqueName={mosque?.name}
-            message={`Check out ${mosque?.name || "this mosque"} prayer times on Salahtime!\n${typeof window !== "undefined" ? window.location.href : ""}`}
-          />
-        </div>
-
-        <div className="mt-5 bg-white border border-slate-100 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-          <div className="text-slate-500 flex items-center gap-2">
-            <Clock3 size={15} />
-            Last Updated: {mosque?.updated_at ? new Date(mosque.updated_at).toLocaleString() : "N/A"}
-          </div>
-          <button
-            type="button"
-            onClick={() => setActiveTab("prayer")}
-            className="text-[#1E8A5E] font-semibold inline-flex items-center gap-1 hover:text-[#176b48]"
-          >
-            View Prayer Times <ChevronRight size={15} />
-          </button>
-        </div>
-
-        <div className="mt-4 text-xs text-slate-400 flex items-center gap-1.5">
-          <CalendarDays size={13} />
-          Prayer schedule may vary slightly. Please confirm with mosque management.
+        <div className="mt-3 text-xs text-[#7B8FA4] flex items-center gap-1">
+          <Clock3 size={13} />
+          Prayer times may vary slightly. Please confirm with mosque management.
         </div>
       </main>
 
