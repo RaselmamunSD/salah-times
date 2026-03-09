@@ -18,6 +18,7 @@ import { IoIosNotificationsOutline } from "react-icons/io";
 import Image from "next/image";
 import { useAuth } from "../providers/AuthProvider";
 import { ProtectedRoute } from "../components/ProtectedRoute";
+import Swal from "sweetalert2";
 
 const navItems = [
   {
@@ -58,7 +59,25 @@ function DashboardLayoutContent({ children }) {
   const currentNavItems = isImam ? imamNavItems : navItems;
 
   const handleLogout = async () => {
-    await logout();
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#1B6A4E",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, logout!"
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        await logout();
+        Swal.fire({
+          title: "Logged out!",
+          text: "You have been logged out successfully.",
+          icon: "success"
+        });
+      }
+    });
+
   };
 
   // Get user display name

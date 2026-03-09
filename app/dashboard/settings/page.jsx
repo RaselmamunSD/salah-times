@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useAxios } from "../../providers/AxiosProvider";
 import { useAuth } from "../../providers/AuthProvider";
 import authService from "../../services/auth";
+import Swal from "sweetalert2";
 
 export default function AccountSettings() {
   const axios = useAxios();
@@ -80,23 +81,31 @@ export default function AccountSettings() {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete your account? This action cannot be undone."
-    );
-    if (!confirmed) {
-      return;
-    }
 
-    setDeleting(true);
-    try {
-      await authService.deleteAccount();
-      await logout();
-    } catch (error) {
-      console.error("Delete account failed:", error);
-      alert("Failed to delete account. Please try again.");
-    } finally {
-      setDeleting(false);
-    }
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#1B6A4E",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete!"
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        await authService.deleteAccount();
+        await logout();
+        await logout();
+        Swal.fire({
+          title: "Account deleted!",
+          text: "Your account has been deleted successfully.",
+          icon: "success"
+        });
+      }
+    });
+
+
+
+
   };
 
   return (

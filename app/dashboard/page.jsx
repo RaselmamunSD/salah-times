@@ -8,6 +8,7 @@ import { useAuth } from "../providers/AuthProvider";
 import { useAxios } from "../providers/AxiosProvider";
 import { mosqueService } from "../services/mosque";
 import TimeCard from "../components/cards/TimeCard";
+import Swal from "sweetalert2";
 
 const DashboardHome = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -19,6 +20,28 @@ const DashboardHome = () => {
   const [locationName, setLocationName] = useState(null);
   const [prayerTimes, setPrayerTimes] = useState([]);
   const [prayerLoading, setPrayerLoading] = useState(true);
+  const handleLogout = async () => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#1B6A4E",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, logout!"
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        await logout();
+        Swal.fire({
+          title: "Logged out!",
+          text: "You have been logged out successfully.",
+          icon: "success"
+        });
+      }
+    });
+
+  };
+
 
   useEffect(() => {
     mosqueService
@@ -113,7 +136,7 @@ const DashboardHome = () => {
           </div>
 
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
             title="Logout"
           >
@@ -174,7 +197,7 @@ const DashboardHome = () => {
 
         {/* Logout Button */}
         <button
-          onClick={logout}
+          onClick={handleLogout}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
           title="Logout"
         >
