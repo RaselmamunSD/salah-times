@@ -95,38 +95,41 @@ export default function MonthlyTimetableModal({ mosqueId, mosqueName, onClose })
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-          <div className="flex items-center gap-3">
-            <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
-              <ChevronLeft size={20} />
-            </button>
-            <h2 className="text-xl font-bold text-slate-800 min-w-[180px] text-center">
-              {MONTH_NAMES[month - 1]} {year}
-            </h2>
-            <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
-              <ChevronRight size={20} />
-            </button>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0 bg-[#1a7f55]">
+          <div>
+            <h2 className="text-lg font-bold text-white">Monthly Prayer Timetable</h2>
+            <p className="text-emerald-200 text-xs mt-0.5">{mosqueName} — {MONTH_NAMES[month - 1]} {year}</p>
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors">
+              <ChevronLeft size={20} />
+            </button>
+            <span className="text-white font-semibold text-sm min-w-[120px] text-center">
+              {MONTH_NAMES[month - 1]} {year}
+            </span>
+            <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors">
+              <ChevronRight size={20} />
+            </button>
+            <div className="w-px h-6 bg-white/30 mx-1"></div>
             <button
               onClick={downloadImage}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-white/15 text-white hover:bg-white/25 transition-colors"
               title="Download as JPG"
             >
-              <FileImage size={16} />
-              <span className="hidden sm:inline">JPG</span>
+              <FileImage size={15} />
+              <span className="hidden sm:inline text-xs">JPG</span>
             </button>
             <button
               onClick={downloadPDF}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg bg-white/15 text-white hover:bg-white/25 transition-colors"
               title="Download as PDF"
             >
-              <Download size={16} />
-              <span className="hidden sm:inline">PDF</span>
+              <Download size={15} />
+              <span className="hidden sm:inline text-xs">PDF</span>
             </button>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors ml-1">
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors ml-1">
               <X size={20} />
             </button>
           </div>
@@ -153,6 +156,22 @@ export default function MonthlyTimetableModal({ mosqueId, mosqueName, onClose })
 
           {!loading && !error && rows.length > 0 && (
             <div ref={tableRef} className="rounded-xl overflow-hidden border border-slate-200">
+              {/* Legend */}
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2.5 bg-slateald-50 border-b border-slate-100 text-xs text-slate-500">
+                <span className="font-semibold text-slate-600">Prayer Time Legend</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-slate-400"></span>
+                  Adhan (Beginning Time)
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-600"></span>
+                  Iqamah (Congregation Time)
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-amber-500"></span>
+                  Friday / Jummah
+                </span>
+              </div>
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="bg-[#1a7f55] text-white">
@@ -163,58 +182,94 @@ export default function MonthlyTimetableModal({ mosqueId, mosqueName, onClose })
                     <th className="px-2 py-3 text-center font-semibold" colSpan={2}>Asr</th>
                     <th className="px-2 py-3 text-center font-semibold" colSpan={2}>Maghrib</th>
                     <th className="px-2 py-3 text-center font-semibold" colSpan={2}>Isha</th>
+                    <th
+                      className="px-2 py-3 text-center font-semibold"
+                      colSpan={2}
+                      style={{ background: "linear-gradient(135deg,#92400e,#b45309)" }}
+                    >
+                      🕌 Jummah
+                    </th>
                   </tr>
                   <tr className="bg-emerald-50 text-[#1a7f55] text-xs font-semibold border-b border-emerald-200">
-                    <th className="px-3 py-2 text-left"></th>
+                    <th className="px-3 py-2 text-left text-slate-500 font-normal">Adhan / Iqamah</th>
                     <th className="px-2 py-2 text-center">Adhan</th><th className="px-2 py-2 text-center">Iqamah</th>
                     <th className="px-2 py-2 text-center">Time</th>
                     <th className="px-2 py-2 text-center">Adhan</th><th className="px-2 py-2 text-center">Iqamah</th>
                     <th className="px-2 py-2 text-center">Adhan</th><th className="px-2 py-2 text-center">Iqamah</th>
                     <th className="px-2 py-2 text-center">Adhan</th><th className="px-2 py-2 text-center">Iqamah</th>
                     <th className="px-2 py-2 text-center">Adhan</th><th className="px-2 py-2 text-center">Iqamah</th>
+                    <th className="px-2 py-2 text-center text-amber-700">Khutbah</th>
+                    <th className="px-2 py-2 text-center text-amber-700">Iqamah</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row, i) => {
                     const date = new Date(row.year, row.month - 1, row.day);
                     const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+                    const isFriday = date.getDay() === 5 || row.is_friday === true;
                     const isToday =
                       row.year === today.getFullYear() &&
                       row.month === today.getMonth() + 1 &&
                       row.day === today.getDate();
+
+                    let rowBg;
+                    if (isFriday) {
+                      rowBg = "bg-amber-50";
+                    } else if (isToday) {
+                      rowBg = "bg-emerald-50 font-semibold";
+                    } else {
+                      rowBg = i % 2 === 0 ? "bg-white" : "bg-slate-50";
+                    }
+
                     return (
-                      <tr
-                        key={row.day}
-                        className={
-                          isToday
-                            ? "bg-emerald-50 font-semibold"
-                            : i % 2 === 0 ? "bg-white" : "bg-slate-50"
-                        }
-                      >
+                      <tr key={row.day} className={rowBg}>
                         <td className="px-3 py-2 whitespace-nowrap font-medium text-slate-700">
                           {isToday && (
                             <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 align-middle"></span>
                           )}
-                          {dayName} {row.day}
+                          <span className={isFriday ? "text-amber-800 font-semibold" : ""}>
+                            {dayName} {row.day}
+                          </span>
+                          {isFriday && (
+                            <span
+                              className="ml-1.5 inline-block text-[10px] font-bold px-1.5 py-0 rounded-full text-white leading-5"
+                              style={{ background: "linear-gradient(135deg,#f59e0b,#fbbf24)" }}
+                            >
+                              Jum
+                            </span>
+                          )}
                         </td>
-                        <td className="px-2 py-2 text-center text-slate-600">{fmt(row.fajr_adhan)}</td>
-                        <td className="px-2 py-2 text-center text-slate-600">{fmt(row.fajr_iqamah)}</td>
-                        <td className="px-2 py-2 text-center text-slate-500">{fmt(row.sunrise)}</td>
-                        <td className="px-2 py-2 text-center text-slate-600">{fmt(row.dhuhr_adhan)}</td>
-                        <td className="px-2 py-2 text-center text-slate-600">{fmt(row.dhuhr_iqamah)}</td>
-                        <td className="px-2 py-2 text-center text-slate-600">{fmt(row.asr_adhan)}</td>
-                        <td className="px-2 py-2 text-center text-slate-600">{fmt(row.asr_iqamah)}</td>
-                        <td className="px-2 py-2 text-center text-slate-600">{fmt(row.maghrib_adhan)}</td>
-                        <td className="px-2 py-2 text-center text-slate-600">{fmt(row.maghrib_iqamah)}</td>
-                        <td className="px-2 py-2 text-center text-slate-600">{fmt(row.isha_adhan)}</td>
-                        <td className="px-2 py-2 text-center text-slate-600">{fmt(row.isha_iqamah)}</td>
+                        <td className="px-2 py-2 text-center text-slate-500 text-xs">{fmt(row.fajr_adhan)}</td>
+                        <td className="px-2 py-2 text-center text-emerald-700 font-semibold text-xs">{fmt(row.fajr_iqamah)}</td>
+                        <td className="px-2 py-2 text-center text-slate-500 text-xs">{fmt(row.sunrise)}</td>
+                        <td className="px-2 py-2 text-center text-slate-500 text-xs">{fmt(row.dhuhr_adhan)}</td>
+                        <td className="px-2 py-2 text-center text-emerald-700 font-semibold text-xs">{fmt(row.dhuhr_iqamah)}</td>
+                        <td className="px-2 py-2 text-center text-slate-500 text-xs">{fmt(row.asr_adhan)}</td>
+                        <td className="px-2 py-2 text-center text-emerald-700 font-semibold text-xs">{fmt(row.asr_iqamah)}</td>
+                        <td className="px-2 py-2 text-center text-slate-500 text-xs">{fmt(row.maghrib_adhan)}</td>
+                        <td className="px-2 py-2 text-center text-emerald-700 font-semibold text-xs">{fmt(row.maghrib_iqamah)}</td>
+                        <td className="px-2 py-2 text-center text-slate-500 text-xs">{fmt(row.isha_adhan)}</td>
+                        <td className="px-2 py-2 text-center text-emerald-700 font-semibold text-xs">{fmt(row.isha_iqamah)}</td>
+                        {isFriday ? (
+                          <>
+                            <td className="px-2 py-2 text-center text-amber-700 text-xs bg-amber-50/60">
+                              {row.jumuah_adhan ? fmt(row.jumuah_adhan) : <span className="text-slate-300">—</span>}
+                            </td>
+                            <td className="px-2 py-2 text-center text-amber-800 font-semibold text-xs bg-amber-50/60">
+                              {row.jumuah_iqamah ? fmt(row.jumuah_iqamah) : <span className="text-slate-300">—</span>}
+                            </td>
+                          </>
+                        ) : (
+                          <td className="px-2 py-2 text-center text-slate-200 text-xs" colSpan={2}>—</td>
+                        )}
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-              <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 text-right">
-                {mosqueName} — {MONTH_NAMES[month - 1]} {year}
+              <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
+                <span>📅 Updated for {MONTH_NAMES[month - 1]} {year}</span>
+                <span className="text-slate-400">{mosqueName}</span>
               </div>
             </div>
           )}

@@ -381,15 +381,27 @@ export default function FindMosque({ currentLocation, refreshKey }) {
           year: activeYear,
         });
         const rows = Array.isArray(res) ? res : res?.results || [];
-        setTimetableData(rows.map(row => ({
-          date: `${row.day} ${monthName(activeMonth)} ${activeYear}`,
-          fajr: { a: formatTimeShort(row.fajr_adhan), i: formatTimeShort(row.fajr_iqamah) },
-          sunrise: formatTimeShort(row.sunrise),
-          dhuhr: { a: formatTimeShort(row.dhuhr_adhan), i: formatTimeShort(row.dhuhr_iqamah) },
-          asr: { a: formatTimeShort(row.asr_adhan), i: formatTimeShort(row.asr_iqamah) },
-          maghrib: { a: formatTimeShort(row.maghrib_adhan), i: formatTimeShort(row.maghrib_iqamah) },
-          isha: { a: formatTimeShort(row.isha_adhan), i: formatTimeShort(row.isha_iqamah) },
-        })));
+        setTimetableData(rows.map(row => {
+          const d = new Date(row.year, row.month - 1, row.day);
+          const isFriday = d.getDay() === 5 || row.is_friday === true;
+          return {
+            day: row.day,
+            year: row.year,
+            month: row.month,
+            date: `${row.day} ${monthName(activeMonth)} ${activeYear}`,
+            isFriday,
+            fajr: { a: formatTimeShort(row.fajr_adhan), i: formatTimeShort(row.fajr_iqamah) },
+            sunrise: formatTimeShort(row.sunrise),
+            dhuhr: { a: formatTimeShort(row.dhuhr_adhan), i: formatTimeShort(row.dhuhr_iqamah) },
+            asr: { a: formatTimeShort(row.asr_adhan), i: formatTimeShort(row.asr_iqamah) },
+            maghrib: { a: formatTimeShort(row.maghrib_adhan), i: formatTimeShort(row.maghrib_iqamah) },
+            isha: { a: formatTimeShort(row.isha_adhan), i: formatTimeShort(row.isha_iqamah) },
+            jummah: isFriday ? {
+              a: formatTimeShort(row.jumuah_adhan),
+              i: formatTimeShort(row.jumuah_iqamah),
+            } : null,
+          };
+        }));
       } catch { setTimetableData([]); }
       finally { setTimetableLoading(false); }
     };
@@ -470,43 +482,173 @@ export default function FindMosque({ currentLocation, refreshKey }) {
       {/* Timetable Modal */}
       {selectedMosque && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden">
-            <div className="bg-[#1C815A] px-6 py-4 flex items-center justify-between text-white">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
+
+            {/* ── Header ── */}
+            <div className="bg-[#1a7f55] px-6 py-4 flex items-center justify-between text-white shrink-0">
               <div>
-                <h2 className="text-xl font-bold">Monthly Timetable</h2>
-                <p className="text-sm opacity-80">{selectedMosque.name}</p>
+                <h2 className="text-lg font-bold">Monthly Prayer Timetable</h2>
+                <p className="text-emerald-200 text-xs mt-0.5">
+                  {selectedMosque.name} — {monthName(activeMonth)} {activeYear}
+                </p>
               </div>
-              <button onClick={closeModal} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
-                <X size={24} />
+              <button onClick={closeModal} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+                <X size={22} />
               </button>
             </div>
-            <div className="flex-1 overflow-auto p-6">
-              <table className="w-full text-sm border-collapse">
-                <thead className="bg-slate-50 sticky top-0">
-                  <tr>
-                    <th className="p-3 text-left border-b font-bold">Date</th>
-                    {["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"].map(p => (
-                      <th key={p} className="p-3 border-b font-bold">{p}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {timetableLoading ? (
-                    <tr><td colSpan={6} className="p-10 text-center">Loading times...</td></tr>
-                  ) : timetableData.map((row, i) => (
-                    <tr key={i} className="border-b hover:bg-slate-50">
-                      <td className="p-3 font-semibold text-slate-700">{row.date}</td>
-                      {[row.fajr, row.dhuhr, row.asr, row.maghrib, row.isha].map((t, ti) => (
-                        <td key={ti} className="p-3 text-center">
-                          <div className="text-[10px] text-slate-400">{t.a}</div>
-                          <div className="font-bold text-[#238B57]">{t.i}</div>
-                        </td>
-                      ))}
+
+            {/* ── Body ── */}
+            <div className="flex-1 overflow-auto">
+              {/* Legend */}
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2.5 border-b border-slate-100 text-xs text-slate-500 bg-slate-50">
+                <span className="font-semibold text-slate-600">Prayer Time Legend</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-slate-400"></span>
+                  Adhan (Beginning Time)
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-600"></span>
+                  Iqamah (Congregation Time)
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-amber-500"></span>
+                  Friday / Jummah
+                </span>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse" style={{ minWidth: "900px" }}>
+                  <thead>
+                    <tr className="bg-[#1a7f55] text-white">
+                      <th className="px-3 py-3 text-left font-semibold">Date</th>
+                      <th className="px-2 py-3 text-center font-semibold" colSpan={2}>Fajr</th>
+                      <th className="px-2 py-3 text-center font-semibold">Sunrise</th>
+                      <th className="px-2 py-3 text-center font-semibold" colSpan={2}>Dhuhr</th>
+                      <th className="px-2 py-3 text-center font-semibold" colSpan={2}>Asr</th>
+                      <th className="px-2 py-3 text-center font-semibold" colSpan={2}>Maghrib</th>
+                      <th className="px-2 py-3 text-center font-semibold" colSpan={2}>Isha</th>
+                      <th
+                        className="px-2 py-3 text-center font-semibold"
+                        colSpan={2}
+                        style={{ background: "linear-gradient(135deg,#92400e,#b45309)" }}
+                      >
+                        🕌 Jummah
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                    <tr className="bg-emerald-50 text-[#1a7f55] text-xs font-semibold border-b border-emerald-200">
+                      <th className="px-3 py-2 text-left text-slate-400 font-normal">Adhan / Iqamah</th>
+                      <th className="px-2 py-2 text-center">Adhan</th>
+                      <th className="px-2 py-2 text-center">Iqamah</th>
+                      <th className="px-2 py-2 text-center">Time</th>
+                      <th className="px-2 py-2 text-center">Adhan</th>
+                      <th className="px-2 py-2 text-center">Iqamah</th>
+                      <th className="px-2 py-2 text-center">Adhan</th>
+                      <th className="px-2 py-2 text-center">Iqamah</th>
+                      <th className="px-2 py-2 text-center">Adhan</th>
+                      <th className="px-2 py-2 text-center">Iqamah</th>
+                      <th className="px-2 py-2 text-center">Adhan</th>
+                      <th className="px-2 py-2 text-center">Iqamah</th>
+                      <th className="px-2 py-2 text-center text-amber-700">Khutbah</th>
+                      <th className="px-2 py-2 text-center text-amber-700">Iqamah</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {timetableLoading ? (
+                      <tr>
+                        <td colSpan={14} className="py-12 text-center text-slate-500">
+                          Loading timetable…
+                        </td>
+                      </tr>
+                    ) : timetableData.length === 0 ? (
+                      <tr>
+                        <td colSpan={14} className="py-12 text-center text-slate-400">
+                          No timetable available for this month.
+                        </td>
+                      </tr>
+                    ) : (
+                      timetableData.map((row, i) => {
+                        const today = new Date();
+                        const isToday =
+                          row.year === today.getFullYear() &&
+                          row.month === today.getMonth() + 1 &&
+                          row.day === today.getDate();
+                        let rowBg;
+                        if (row.isFriday) rowBg = "bg-amber-50";
+                        else if (isToday) rowBg = "bg-emerald-50 font-semibold";
+                        else rowBg = i % 2 === 0 ? "bg-white" : "bg-slate-50";
+
+                        return (
+                          <tr key={i} className={`border-b border-slate-100 ${rowBg}`}>
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              {isToday && (
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 align-middle"></span>
+                              )}
+                              <span className={row.isFriday ? "text-amber-800 font-semibold" : "text-slate-700 font-medium"}>
+                                {row.date}
+                              </span>
+                              {row.isFriday && (
+                                <span
+                                  className="ml-1.5 inline-block text-[10px] font-bold px-1.5 rounded-full text-white leading-5"
+                                  style={{ background: "linear-gradient(135deg,#f59e0b,#fbbf24)" }}
+                                >
+                                  Jum
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-2 py-2 text-center text-slate-400 text-xs">{row.fajr.a}</td>
+                            <td className="px-2 py-2 text-center text-emerald-700 font-semibold text-xs">{row.fajr.i}</td>
+                            <td className="px-2 py-2 text-center text-slate-400 text-xs">{row.sunrise}</td>
+                            <td className="px-2 py-2 text-center text-slate-400 text-xs">{row.dhuhr.a}</td>
+                            <td className="px-2 py-2 text-center text-emerald-700 font-semibold text-xs">{row.dhuhr.i}</td>
+                            <td className="px-2 py-2 text-center text-slate-400 text-xs">{row.asr.a}</td>
+                            <td className="px-2 py-2 text-center text-emerald-700 font-semibold text-xs">{row.asr.i}</td>
+                            <td className="px-2 py-2 text-center text-slate-400 text-xs">{row.maghrib.a}</td>
+                            <td className="px-2 py-2 text-center text-emerald-700 font-semibold text-xs">{row.maghrib.i}</td>
+                            <td className="px-2 py-2 text-center text-slate-400 text-xs">{row.isha.a}</td>
+                            <td className="px-2 py-2 text-center text-emerald-700 font-semibold text-xs">{row.isha.i}</td>
+                            {row.isFriday && row.jummah ? (
+                              <>
+                                <td className="px-2 py-2 text-center text-amber-700 text-xs bg-amber-50/60">
+                                  {row.jummah.a !== "--:--" ? row.jummah.a : <span className="text-slate-300">—</span>}
+                                </td>
+                                <td className="px-2 py-2 text-center text-amber-800 font-semibold text-xs bg-amber-50/60">
+                                  {row.jummah.i !== "--:--" ? row.jummah.i : <span className="text-slate-300">—</span>}
+                                </td>
+                              </>
+                            ) : (
+                              <td className="px-2 py-2 text-center text-slate-200 text-xs" colSpan={2}>—</td>
+                            )}
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
+
+            {/* ── Footer ── */}
+            <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+              <span className="text-xs text-slate-500">
+                📅 Updated for {monthName(activeMonth)} {activeYear}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => downloadTimetable("jpg")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#1a7f55] text-white hover:bg-[#155f3e] transition-colors"
+                >
+                  ↓ Download JPG
+                </button>
+                <button
+                  onClick={() => downloadTimetable("pdf")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#1a7f55] text-white hover:bg-[#155f3e] transition-colors"
+                >
+                  ↓ Download PDF
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}

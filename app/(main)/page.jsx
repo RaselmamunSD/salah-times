@@ -23,25 +23,25 @@ export default function Main() {
   });
   const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    const refreshNow = () => setRefreshKey((prev) => prev + 1);
+  // useEffect(() => {
+  //   const refreshNow = () => setRefreshKey((prev) => prev + 1);
 
-    const interval = setInterval(refreshNow, 30000);
-    window.addEventListener("focus", refreshNow);
+  //   const interval = setInterval(refreshNow, 30000);
+  //   window.addEventListener("focus", refreshNow);
 
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        refreshNow();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
+  //   const onVisibilityChange = () => {
+  //     if (document.visibilityState === "visible") {
+  //       refreshNow();
+  //     }
+  //   };
+  //   document.addEventListener("visibilitychange", onVisibilityChange);
 
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", refreshNow);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
-  }, []);
+  //   return () => {
+  //     clearInterval(interval);
+  //     window.removeEventListener("focus", refreshNow);
+  //     document.removeEventListener("visibilitychange", onVisibilityChange);
+  //   };
+  // }, []);
 
   return (
     <main className={`${inter.className} w-full  flex flex-col items-center`}>

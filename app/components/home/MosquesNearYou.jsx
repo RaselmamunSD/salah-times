@@ -217,15 +217,27 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
         year: activeYear,
       });
 
-      const mappedRows = rows.map((row) => ({
-        date: `${row.day} ${monthName((row.month || activeMonth + 1) - 1)} ${row.year || activeYear}`,
-        fajr: { a: formatTimeShort(row.fajr_adhan), i: formatTimeShort(row.fajr_iqamah) },
-        sunrise: formatTimeShort(row.sunrise),
-        dhuhr: { a: formatTimeShort(row.dhuhr_adhan), i: formatTimeShort(row.dhuhr_iqamah) },
-        asr: { a: formatTimeShort(row.asr_adhan), i: formatTimeShort(row.asr_iqamah) },
-        maghrib: { a: formatTimeShort(row.maghrib_adhan), i: formatTimeShort(row.maghrib_iqamah) },
-        isha: { a: formatTimeShort(row.isha_adhan), i: formatTimeShort(row.isha_iqamah) },
-      }));
+      const mappedRows = rows.map((row) => {
+        const d = new Date(row.year, row.month - 1, row.day);
+        const isFriday = d.getDay() === 5 || row.is_friday === true;
+        return {
+          day: row.day,
+          month: row.month,
+          year: row.year,
+          date: `${row.day} ${monthName((row.month || activeMonth + 1) - 1)} ${row.year || activeYear}`,
+          isFriday,
+          fajr: { a: formatTimeShort(row.fajr_adhan), i: formatTimeShort(row.fajr_iqamah) },
+          sunrise: formatTimeShort(row.sunrise),
+          dhuhr: { a: formatTimeShort(row.dhuhr_adhan), i: formatTimeShort(row.dhuhr_iqamah) },
+          asr: { a: formatTimeShort(row.asr_adhan), i: formatTimeShort(row.asr_iqamah) },
+          maghrib: { a: formatTimeShort(row.maghrib_adhan), i: formatTimeShort(row.maghrib_iqamah) },
+          isha: { a: formatTimeShort(row.isha_adhan), i: formatTimeShort(row.isha_iqamah) },
+          jummah: isFriday ? {
+            a: formatTimeShort(row.jumuah_adhan),
+            i: formatTimeShort(row.jumuah_iqamah),
+          } : null,
+        };
+      });
 
       setTimetableData(mappedRows);
     } catch (error) {
@@ -383,81 +395,109 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
                     <div className="w-2.5 h-2.5 rounded-full bg-[#238B57]"></div>
                     Iqamah (Congregation Time)
                   </div>
+                  <div className="flex items-center gap-1.5 text-amber-700 font-medium">
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                    Friday / Jummah
+                  </div>
                 </div>
               </div>
 
               <div className="overflow-x-auto rounded-lg border border-[#D1E5D9]">
-                <table className="w-full text-center border-collapse whitespace-nowrap">
-                  <thead className="bg-[#1C815A] text-white">
-                    <tr>
-                      <th className="py-3 px-4 font-semibold text-left border-r border-white/20 w-32">
-                        Date
+                <table className="w-full text-center border-collapse" style={{ minWidth: "820px" }}>
+                  <thead>
+                    <tr className="bg-[#1a7f55] text-white">
+                      <th className="py-3 px-4 font-semibold text-left border-r border-white/20">Date</th>
+                      <th className="py-2 px-2 font-medium border-r border-white/20" colSpan={2}>
+                        <div className="font-bold">Fajr</div>
                       </th>
-                      {["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"].map(
-                        (prayer) => (
-                          <th
-                            key={prayer}
-                            className="py-2 px-2 font-medium border-r border-white/20 w-24"
-                          >
-                            <div className="font-bold">{prayer}</div>
-                            <div className="text-[10px] text-white/70 font-normal">
-                              Adhan / Iqamah
-                            </div>
-                          </th>
-                        )
-                      )}
-                      <th className="py-2 px-2 font-medium border-white/20 w-20">
+                      <th className="py-2 px-2 font-medium border-r border-white/20">
                         <div className="font-bold">Sunrise</div>
                         <div className="text-[10px] text-white/70 font-normal">Time</div>
                       </th>
+                      {["Dhuhr", "Asr", "Maghrib", "Isha"].map((prayer) => (
+                        <th key={prayer} className="py-2 px-2 font-medium border-r border-white/20" colSpan={2}>
+                          <div className="font-bold">{prayer}</div>
+                        </th>
+                      ))}
+                      <th
+                        className="py-2 px-2 font-medium"
+                        colSpan={2}
+                        style={{ background: "linear-gradient(135deg,#92400e,#b45309)" }}
+                      >
+                        <div className="font-bold">🕌 Jummah</div>
+                      </th>
+                    </tr>
+                    <tr className="bg-emerald-50 text-[#1a7f55] text-[10px] font-semibold border-b border-emerald-200">
+                      <th className="py-1.5 px-4 text-left text-slate-400 font-normal">Adhan / Iqamah</th>
+                      <th className="py-1.5 px-2">Adhan</th><th className="py-1.5 px-2">Iqamah</th>
+                      <th className="py-1.5 px-2">Time</th>
+                      <th className="py-1.5 px-2">Adhan</th><th className="py-1.5 px-2">Iqamah</th>
+                      <th className="py-1.5 px-2">Adhan</th><th className="py-1.5 px-2">Iqamah</th>
+                      <th className="py-1.5 px-2">Adhan</th><th className="py-1.5 px-2">Iqamah</th>
+                      <th className="py-1.5 px-2">Adhan</th><th className="py-1.5 px-2">Iqamah</th>
+                      <th className="py-1.5 px-2 text-amber-700">Khutbah</th>
+                      <th className="py-1.5 px-2 text-amber-700">Iqamah</th>
                     </tr>
                   </thead>
                   <tbody>
                     {timetableLoading && (
                       <tr>
-                        <td colSpan={7} className="py-8 text-sm text-slate-500">
-                          Loading timetable...
-                        </td>
+                        <td colSpan={14} className="py-8 text-sm text-slate-500">Loading timetable...</td>
                       </tr>
                     )}
-
                     {!timetableLoading && timetableData.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="py-8 text-sm text-slate-500">
-                          No timetable data available for this month.
-                        </td>
+                        <td colSpan={14} className="py-8 text-sm text-slate-500">No timetable data available for this month.</td>
                       </tr>
                     )}
-
-                    {!timetableLoading && timetableData.map((row, idx) => (
-                      <tr key={idx} className="border-b border-[#D1E5D9]">
-                        <td className="py-2.5 px-4 text-sm font-semibold text-slate-700 text-left border-r border-[#D1E5D9]">
-                          {row.date}
-                        </td>
-                        {[
-                          row.fajr,
-                          row.dhuhr,
-                          row.asr,
-                          row.maghrib,
-                          row.isha,
-                        ].map((time, tIdx) => (
-                          <td
-                            key={tIdx}
-                            className="py-2.5 px-2 border-r last:border-r-0 border-[#D1E5D9]"
-                          >
-                            <div className="text-xs text-slate-500 font-medium mb-0.5">
-                              {time.a}
-                            </div>
-                            <div className="text-xs text-[#238B57] font-bold">
-                              {time.i}
-                            </div>
+                    {!timetableLoading && timetableData.map((row, idx) => {
+                      const today = new Date();
+                      const isToday =
+                        row.year === today.getFullYear() &&
+                        row.month === today.getMonth() + 1 &&
+                        row.day === today.getDate();
+                      let rowBg;
+                      if (row.isFriday) rowBg = "bg-amber-50";
+                      else if (isToday) rowBg = "bg-emerald-50";
+                      else rowBg = idx % 2 === 0 ? "bg-white" : "bg-slate-50";
+                      return (
+                        <tr key={idx} className={`border-b border-[#D1E5D9] ${rowBg}`}>
+                          <td className="py-2.5 px-4 text-xs font-medium text-left border-r border-[#D1E5D9] whitespace-nowrap">
+                            {isToday && <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 align-middle"></span>}
+                            <span className={row.isFriday ? "text-amber-800 font-semibold" : "text-slate-700"}>{row.date}</span>
+                            {row.isFriday && (
+                              <span
+                                className="ml-1.5 inline-block text-[9px] font-bold px-1.5 rounded-full text-white leading-4"
+                                style={{ background: "linear-gradient(135deg,#f59e0b,#fbbf24)" }}
+                              >Jum</span>
+                            )}
                           </td>
-                        ))}
-                        <td className="py-2.5 px-2 border-r border-[#D1E5D9]">
-                          <div className="text-xs text-slate-500 font-medium">{row.sunrise}</div>
-                        </td>
-                      </tr>
-                    ))}
+                          <td className="py-2.5 px-2 text-xs text-slate-500 border-r border-[#D1E5D9]">{row.fajr.a}</td>
+                          <td className="py-2.5 px-2 text-xs text-[#238B57] font-bold border-r border-[#D1E5D9]">{row.fajr.i}</td>
+                          <td className="py-2.5 px-2 text-xs text-slate-500 border-r border-[#D1E5D9]">{row.sunrise}</td>
+                          <td className="py-2.5 px-2 text-xs text-slate-500 border-r border-[#D1E5D9]">{row.dhuhr.a}</td>
+                          <td className="py-2.5 px-2 text-xs text-[#238B57] font-bold border-r border-[#D1E5D9]">{row.dhuhr.i}</td>
+                          <td className="py-2.5 px-2 text-xs text-slate-500 border-r border-[#D1E5D9]">{row.asr.a}</td>
+                          <td className="py-2.5 px-2 text-xs text-[#238B57] font-bold border-r border-[#D1E5D9]">{row.asr.i}</td>
+                          <td className="py-2.5 px-2 text-xs text-slate-500 border-r border-[#D1E5D9]">{row.maghrib.a}</td>
+                          <td className="py-2.5 px-2 text-xs text-[#238B57] font-bold border-r border-[#D1E5D9]">{row.maghrib.i}</td>
+                          <td className="py-2.5 px-2 text-xs text-slate-500 border-r border-[#D1E5D9]">{row.isha.a}</td>
+                          <td className="py-2.5 px-2 text-xs text-[#238B57] font-bold border-r border-[#D1E5D9]">{row.isha.i}</td>
+                          {row.isFriday && row.jummah ? (
+                            <>
+                              <td className="py-2.5 px-2 text-xs text-amber-700 bg-amber-50/60 border-r border-[#D1E5D9]">
+                                {row.jummah.a !== "--:--" ? row.jummah.a : <span className="text-slate-300">—</span>}
+                              </td>
+                              <td className="py-2.5 px-2 text-xs text-amber-800 font-bold bg-amber-50/60">
+                                {row.jummah.i !== "--:--" ? row.jummah.i : <span className="text-slate-300">—</span>}
+                              </td>
+                            </>
+                          ) : (
+                            <td className="py-2.5 px-2 text-xs text-slate-200" colSpan={2}>—</td>
+                          )}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

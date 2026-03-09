@@ -28,6 +28,8 @@ const emptyTimetableForm = {
     maghrib_iqamah: "",
     isha_adhan: "",
     isha_iqamah: "",
+    jumuah_adhan: "",
+    jumuah_iqamah: "",
 };
 
 function ImamMosquesPageContent() {
@@ -201,6 +203,10 @@ function ImamMosquesPageContent() {
             return;
         }
 
+        const entryDay = Number(timetableForm.day);
+        const entryDate = new Date(Number(year), Number(month) - 1, entryDay);
+        const entryIsFriday = entryDate.getDay() === 5;
+
         setSavingTimetable(true);
         try {
             await mosqueService.saveImamMonthlyTimetable(selectedMosqueId, {
@@ -208,7 +214,7 @@ function ImamMosquesPageContent() {
                 month: Number(month),
                 entries: [
                     {
-                        day: Number(timetableForm.day),
+                        day: entryDay,
                         fajr_adhan: timetableForm.fajr_adhan,
                         fajr_iqamah: timetableForm.fajr_iqamah,
                         sunrise: timetableForm.sunrise || null,
@@ -220,6 +226,8 @@ function ImamMosquesPageContent() {
                         maghrib_iqamah: timetableForm.maghrib_iqamah,
                         isha_adhan: timetableForm.isha_adhan,
                         isha_iqamah: timetableForm.isha_iqamah,
+                        jumuah_adhan: entryIsFriday ? (timetableForm.jumuah_adhan || null) : null,
+                        jumuah_iqamah: entryIsFriday ? (timetableForm.jumuah_iqamah || null) : null,
                     },
                 ],
             });
@@ -262,20 +270,27 @@ function ImamMosquesPageContent() {
         }
 
         const daysInMonth = new Date(Number(year), Number(month), 0).getDate();
-        const entries = Array.from({ length: daysInMonth }, (_, index) => ({
-            day: index + 1,
-            fajr_adhan: timetableForm.fajr_adhan,
-            fajr_iqamah: timetableForm.fajr_iqamah,
-            sunrise: timetableForm.sunrise || null,
-            dhuhr_adhan: timetableForm.dhuhr_adhan,
-            dhuhr_iqamah: timetableForm.dhuhr_iqamah,
-            asr_adhan: timetableForm.asr_adhan,
-            asr_iqamah: timetableForm.asr_iqamah,
-            maghrib_adhan: timetableForm.maghrib_adhan,
-            maghrib_iqamah: timetableForm.maghrib_iqamah,
-            isha_adhan: timetableForm.isha_adhan,
-            isha_iqamah: timetableForm.isha_iqamah,
-        }));
+        const entries = Array.from({ length: daysInMonth }, (_, index) => {
+            const day = index + 1;
+            const dayDate = new Date(Number(year), Number(month) - 1, day);
+            const isDayFriday = dayDate.getDay() === 5;
+            return {
+                day,
+                fajr_adhan: timetableForm.fajr_adhan,
+                fajr_iqamah: timetableForm.fajr_iqamah,
+                sunrise: timetableForm.sunrise || null,
+                dhuhr_adhan: timetableForm.dhuhr_adhan,
+                dhuhr_iqamah: timetableForm.dhuhr_iqamah,
+                asr_adhan: timetableForm.asr_adhan,
+                asr_iqamah: timetableForm.asr_iqamah,
+                maghrib_adhan: timetableForm.maghrib_adhan,
+                maghrib_iqamah: timetableForm.maghrib_iqamah,
+                isha_adhan: timetableForm.isha_adhan,
+                isha_iqamah: timetableForm.isha_iqamah,
+                jumuah_adhan: isDayFriday ? (timetableForm.jumuah_adhan || null) : null,
+                jumuah_iqamah: isDayFriday ? (timetableForm.jumuah_iqamah || null) : null,
+            };
+        });
 
         setSavingTimetable(true);
         try {
@@ -504,6 +519,22 @@ function ImamMosquesPageContent() {
                     <input type="time" value={timetableForm.isha_adhan} onChange={handleTimetableFormChange("isha_adhan")} className="border border-gray-200 rounded-lg px-3 py-2" />
                     <input type="time" value={timetableForm.isha_iqamah} onChange={handleTimetableFormChange("isha_iqamah")} className="border border-gray-200 rounded-lg px-3 py-2" />
 
+                    {/* Jummah fields — always visible; apply to Fridays only */}
+                    <div className="md:col-span-5 grid grid-cols-2 gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                        <p className="col-span-2 text-xs font-semibold text-amber-800">
+                            🕌 Jummah Times
+                            <span className="ml-2 font-normal text-amber-600">(Applies to Fridays only — used for both single entry and full-month save)</span>
+                        </p>
+                        <div>
+                            <label className="block text-xs text-amber-700 mb-1">Jummah Khutbah/Adhan</label>
+                            <input type="time" value={timetableForm.jumuah_adhan} onChange={handleTimetableFormChange("jumuah_adhan")} className="w-full border border-amber-300 rounded-lg px-3 py-2 bg-white" />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-amber-700 mb-1">Jummah Iqamah</label>
+                            <input type="time" value={timetableForm.jumuah_iqamah} onChange={handleTimetableFormChange("jumuah_iqamah")} className="w-full border border-amber-300 rounded-lg px-3 py-2 bg-white" />
+                        </div>
+                    </div>
+
                     <button type="submit" disabled={savingTimetable} className="md:col-span-5 bg-[#238B57] text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50">
                         {savingTimetable ? "Saving timetable..." : "Save Timetable Entry"}
                     </button>
@@ -528,34 +559,65 @@ function ImamMosquesPageContent() {
                                 <th className="text-left px-3 py-2">Asr</th>
                                 <th className="text-left px-3 py-2">Maghrib</th>
                                 <th className="text-left px-3 py-2">Isha</th>
+                                <th
+                                    className="text-left px-3 py-2 text-amber-700"
+                                    style={{ background: "linear-gradient(135deg,#fef3c7,#fde68a)" }}
+                                >
+                                    🕌 Jummah
+                                </th>
                                 <th className="text-left px-3 py-2">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {timetableRows.length === 0 && (
                                 <tr>
-                                    <td colSpan={8} className="px-3 py-4 text-slate-500">No timetable entry for selected month.</td>
+                                    <td colSpan={9} className="px-3 py-4 text-slate-500">No timetable entry for selected month.</td>
                                 </tr>
                             )}
-                            {timetableRows.map((row) => (
-                                <tr key={row.id} className="border-t border-gray-100">
-                                    <td className="px-3 py-2">{row.day}</td>
-                                    <td className="px-3 py-2">{row.fajr_adhan} / {row.fajr_iqamah}</td>
-                                    <td className="px-3 py-2">{row.sunrise || '-'}</td>
-                                    <td className="px-3 py-2">{row.dhuhr_adhan} / {row.dhuhr_iqamah}</td>
-                                    <td className="px-3 py-2">{row.asr_adhan} / {row.asr_iqamah}</td>
-                                    <td className="px-3 py-2">{row.maghrib_adhan} / {row.maghrib_iqamah}</td>
-                                    <td className="px-3 py-2">{row.isha_adhan} / {row.isha_iqamah}</td>
-                                    <td className="px-3 py-2">
-                                        <button
-                                            onClick={() => deleteTimetableEntry(row.day)}
-                                            className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100"
-                                        >
-                                            Delete
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {timetableRows.map((row) => {
+                                const rowDate = new Date(Number(year), Number(month) - 1, row.day);
+                                const isFriday = rowDate.getDay() === 5 || row.is_friday === true;
+                                return (
+                                    <tr key={row.id} className={`border-t border-gray-100 ${isFriday ? "bg-amber-50" : ""}`}>
+                                        <td className="px-3 py-2 font-medium">
+                                            <span className={isFriday ? "text-amber-800 font-semibold" : ""}>{row.day}</span>
+                                            {isFriday && (
+                                                <span
+                                                    className="ml-1.5 inline-block text-[10px] font-bold px-1.5 rounded-full text-white leading-5"
+                                                    style={{ background: "linear-gradient(135deg,#f59e0b,#fbbf24)" }}
+                                                >
+                                                    Fri
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-3 py-2">{row.fajr_adhan} / {row.fajr_iqamah}</td>
+                                        <td className="px-3 py-2">{row.sunrise || "-"}</td>
+                                        <td className="px-3 py-2">{row.dhuhr_adhan} / {row.dhuhr_iqamah}</td>
+                                        <td className="px-3 py-2">{row.asr_adhan} / {row.asr_iqamah}</td>
+                                        <td className="px-3 py-2">{row.maghrib_adhan} / {row.maghrib_iqamah}</td>
+                                        <td className="px-3 py-2">{row.isha_adhan} / {row.isha_iqamah}</td>
+                                        <td className="px-3 py-2">
+                                            {isFriday ? (
+                                                <span className="text-amber-800 font-semibold">
+                                                    {row.jumuah_adhan || <span className="text-slate-300">—</span>}
+                                                    {row.jumuah_adhan && row.jumuah_iqamah ? " / " : ""}
+                                                    {row.jumuah_iqamah || ""}
+                                                </span>
+                                            ) : (
+                                                <span className="text-slate-200">—</span>
+                                            )}
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <button
+                                                onClick={() => deleteTimetableEntry(row.day)}
+                                                className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100"
+                                            >
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

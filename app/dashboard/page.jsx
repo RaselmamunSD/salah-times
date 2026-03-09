@@ -1,24 +1,88 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Star, MapPin, ArrowRight, User, LogOut, Building2, CalendarDays } from "lucide-react";
 import { ProtectedRoute } from "../components/ProtectedRoute";
 import { useAuth } from "../providers/AuthProvider";
+import { useAxios } from "../providers/AxiosProvider";
+import { mosqueService } from "../services/mosque";
+import TimeCard from "../components/cards/TimeCard";
 
 const DashboardHome = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const router = useRouter();
+  const axios = useAxios();
   const isImam = Boolean(user?.is_imam || user?.user_type === "imam");
 
-  const prayerTimes = [
-    { name: "Fajr", time: "05:45 AM" },
-    { name: "Sunrise", time: "07:12 AM" },
-    { name: "Dhuhr", time: "12:30 PM" },
-    { name: "Asr", time: "03:45 PM" },
-    { name: "Maghrib", time: "05:58 PM" },
-    { name: "Isha", time: "07:25 PM" },
-  ];
+  const [favoritesCount, setFavoritesCount] = useState(null);
+  const [locationName, setLocationName] = useState(null);
+  const [prayerTimes, setPrayerTimes] = useState([]);
+  const [prayerLoading, setPrayerLoading] = useState(true);
+
+  useEffect(() => {
+    mosqueService
+      .getFavorites()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.results ?? [];
+        setFavoritesCount(list.length);
+      })
+      .catch(() => setFavoritesCount(0));
+  }, []);
+
+  useEffect(() => {
+    setPrayerLoading(true);
+    const fetchData = async () => {
+      try {
+        // Get city from profile
+        let cityId = null;
+        try {
+          const profileRes = await axios.get("/api/users/profile/me/");
+          if (profileRes.data?.current_city_name) setLocationName(profileRes.data.current_city_name);
+          cityId = profileRes.data?.current_city || null;
+        } catch { }
+
+        // Find mosque in user's city, fallback to first verified mosque
+        let mosqueId = null;
+        if (cityId) {
+          const res = await mosqueService.list({ city: cityId, limit: 1 });
+          const items = Array.isArray(res) ? res : (res?.results ?? []);
+          if (items.length > 0) mosqueId = items[0].id;
+        }
+        if (!mosqueId) {
+          const res = await mosqueService.list({ limit: 1 });
+          const items = Array.isArray(res) ? res : (res?.results ?? []);
+          if (items.length > 0) mosqueId = items[0].id;
+        }
+        if (!mosqueId) return;
+
+        // Fetch today's prayer times for that mosque
+        const data = await mosqueService.getPrayerTimes(mosqueId);
+        if (data?.prayer_times) {
+          setPrayerTimes(
+            data.prayer_times.map((prayer, index) => {
+              const isNext = index === data.next_prayer_index;
+              if (prayer.name === "Sunrise") {
+                return { waqt: prayer.name, time: prayer.time, subTime: null, subLabel: null, isNext: false };
+              }
+              return {
+                waqt: prayer.name,
+                time: prayer.jamaah || prayer.time,
+                subTime: prayer.beginning || prayer.sunset || null,
+                subLabel: prayer.beginning ? "Beginning" : (prayer.sunset ? "Sunset" : null),
+                isNext,
+              };
+            })
+          );
+        }
+      } catch {
+        setPrayerTimes([]);
+      } finally {
+        setPrayerLoading(false);
+      }
+    };
+    fetchData();
+  }, [axios]);
 
   // Get user display name
   const userName = user
@@ -133,7 +197,9 @@ const DashboardHome = () => {
               />
             </div>
             <div>
-              <div className="text-2xl font-bold text-[#1E293B]">2</div>
+              <div className="text-2xl font-bold text-[#1E293B]">
+                {favoritesCount !== null ? favoritesCount : "…"}
+              </div>
               <div className="text-sm text-slate-500 font-medium">
                 Favorite Mosques
               </div>
@@ -160,7 +226,7 @@ const DashboardHome = () => {
             </div>
             <div>
               <div className="text-[17px] font-bold text-[#1E293B] leading-tight">
-                Dhaka, Bangladesh
+                {locationName || "Not set"}
               </div>
               <div className="text-sm text-slate-500 font-medium">
                 Current Location
@@ -215,21 +281,17 @@ const DashboardHome = () => {
           Today's Prayer Times
         </h2>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-          {prayerTimes.map((item, index) => (
-            <div
-              key={index}
-              className="bg-[#F0F7FF] rounded-xl py-5 px-4 flex flex-col items-center justify-center text-center transition-transform hover:scale-[1.02] cursor-default"
-            >
-              <span className="text-[13px] text-slate-500 font-medium mb-1">
-                {item.name}
-              </span>
-              <span className="text-[15px] font-bold text-[#1E293B]">
-                {item.time}
-              </span>
-            </div>
-          ))}
-        </div>
+        {prayerLoading ? (
+          <div className="text-center text-slate-400 py-6">Loading…</div>
+        ) : prayerTimes.length === 0 ? (
+          <div className="text-center text-slate-400 py-6">No prayer times available for today.</div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+            {prayerTimes.map((item, index) => (
+              <TimeCard key={index} time={item} isNext={item.isNext} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
