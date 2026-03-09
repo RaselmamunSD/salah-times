@@ -1,8 +1,7 @@
 "use client";
 
 import { Poppins } from "next/font/google";
-import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import rightArrowGreen from "../../../public/icons/rightArrowGreen.png";
 import Image from "next/image";
 import MosqueCard from "../cards/MosqueCard";
@@ -13,6 +12,8 @@ const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
 });
+
+const DEFAULT_VISIBLE_MOSQUES = 6;
 
 const monthName = (monthIndex) =>
   new Date(2026, monthIndex, 1).toLocaleString("en-US", { month: "long" });
@@ -29,19 +30,65 @@ const formatTimeShort = (value) => {
   }
 };
 
+const haversineDistanceKm = (lat1, lon1, lat2, lon2) => {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+const toNumber = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+
 const MosquesNearYou = ({ currentLocation, refreshKey }) => {
   const [mosques, setMosques] = useState([]);
   const [selectedMosque, setSelectedMosque] = useState(null);
   const [timetableLoading, setTimetableLoading] = useState(false);
   const [timetableData, setTimetableData] = useState([]);
+  const [showAllMosques, setShowAllMosques] = useState(false);
+  const [liveLocation, setLiveLocation] = useState(null);
   const [activeMonth] = useState(new Date().getMonth());
   const [activeYear] = useState(new Date().getFullYear());
+  const geocodeCacheRef = useRef(new Map());
+  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        setLiveLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      () => { },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
 
   useEffect(() => {
     const fetchMosques = async () => {
       try {
         let response = [];
         let favoriteIds = new Set();
+        const liveLat = toNumber(liveLocation?.latitude);
+        const liveLng = toNumber(liveLocation?.longitude);
+        const currentLat = toNumber(currentLocation?.latitude);
+        const currentLng = toNumber(currentLocation?.longitude);
+        const queryLat = liveLat ?? currentLat;
+        const queryLng = liveLng ?? currentLng;
 
         try {
           const favoritesResponse = await mosqueService.getFavorites();
@@ -51,12 +98,23 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
           favoriteIds = new Set();
         }
 
-        if (currentLocation?.latitude && currentLocation?.longitude) {
+        if (queryLat !== null && queryLng !== null) {
           response = await mosqueService.getNearby(
-            currentLocation.latitude,
-            currentLocation.longitude,
+            queryLat,
+            queryLng,
             10
           );
+
+          const nearbyItems = Array.isArray(response)
+            ? response
+            : Array.isArray(response?.results)
+              ? response.results
+              : [];
+
+          // If no nearby result, fall back to general mosque list so cards remain visible.
+          if (nearbyItems.length === 0) {
+            response = await mosqueService.list();
+          }
         } else {
           response = await mosqueService.list();
         }
@@ -67,14 +125,67 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
             ? response.results
             : [];
 
-        const formatted = items.slice(0, 6).map((mosque) => ({
-          id: mosque.id,
-          name: mosque.name,
-          location: mosque.city_name || mosque.address || "Dhaka",
-          distance: mosque.distance_km ? mosque.distance_km.toFixed(1) : "2.3",
-          prayer: "Dhuhr",
-          time: "12:30 PM",
-          isFavorite: favoriteIds.has(mosque.id),
+        const geocodeMosque = async (mosque) => {
+          if (!googleMapsApiKey) return { lat: null, lng: null };
+
+          const addressParts = [mosque?.address, mosque?.city_name, "Bangladesh"]
+            .filter(Boolean)
+            .join(", ");
+          if (!addressParts) return { lat: null, lng: null };
+
+          if (geocodeCacheRef.current.has(addressParts)) {
+            return geocodeCacheRef.current.get(addressParts);
+          }
+
+          try {
+            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addressParts)}&key=${googleMapsApiKey}`;
+            const res = await fetch(url);
+            if (!res.ok) return { lat: null, lng: null };
+            const data = await res.json();
+            const loc = data?.results?.[0]?.geometry?.location;
+            const result = {
+              lat: toNumber(loc?.lat),
+              lng: toNumber(loc?.lng),
+            };
+            geocodeCacheRef.current.set(addressParts, result);
+            return result;
+          } catch {
+            return { lat: null, lng: null };
+          }
+        };
+
+        const formatted = await Promise.all(items.map(async (mosque) => {
+          let mosqueLat = toNumber(mosque.latitude);
+          let mosqueLng = toNumber(mosque.longitude);
+          if (mosqueLat === null || mosqueLng === null) {
+            const geo = await geocodeMosque(mosque);
+            mosqueLat = geo.lat;
+            mosqueLng = geo.lng;
+          }
+          const userLat = queryLat;
+          const userLng = queryLng;
+
+          let distance = null;
+          if (
+            userLat !== null &&
+            userLng !== null &&
+            mosqueLat !== null &&
+            mosqueLng !== null
+          ) {
+            distance = haversineDistanceKm(userLat, userLng, mosqueLat, mosqueLng).toFixed(1);
+          }
+
+          return {
+            id: mosque.id,
+            name: mosque.name,
+            location: mosque.city_name || mosque.address || "Dhaka",
+            latitude: mosqueLat,
+            longitude: mosqueLng,
+            distance,
+            prayer: "Dhuhr",
+            time: "12:30 PM",
+            isFavorite: favoriteIds.has(mosque.id),
+          };
         }));
 
         setMosques(formatted);
@@ -84,7 +195,7 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
     };
 
     fetchMosques();
-  }, [currentLocation?.latitude, currentLocation?.longitude, refreshKey]);
+  }, [currentLocation?.latitude, currentLocation?.longitude, liveLocation?.latitude, liveLocation?.longitude, refreshKey, googleMapsApiKey]);
 
   const handleFavoriteChanged = (mosqueId, isFavorite) => {
     setMosques((prev) =>
@@ -190,6 +301,11 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
     link.click();
   };
 
+  const displayedMosques = showAllMosques
+    ? mosques
+    : mosques.slice(0, DEFAULT_VISIBLE_MOSQUES);
+  const canToggleViewAll = mosques.length > DEFAULT_VISIBLE_MOSQUES;
+  console.log(mosques);
   return (
     <>
       <div className="max-w-[1216px] mx-auto w-full md:mt-80 px-4 md:px-0">
@@ -199,22 +315,26 @@ const MosquesNearYou = ({ currentLocation, refreshKey }) => {
           >
             Mosques Near You
           </h3>
-          <Link
-            href={`/mosques`}
+          <button
+            type="button"
+            onClick={() => {
+              if (canToggleViewAll) setShowAllMosques((prev) => !prev);
+            }}
             className="text-[#1F8A5B] text-base font-medium flex items-center gap-2.5 hover:text-[#157a49] transition-colors"
           >
-            View All{" "}
+            {showAllMosques ? "Show Less" : "View All"}
             <Image
               src={rightArrowGreen}
               width={4.5}
               height={9}
               alt="right green arrow"
+              className={`transition-transform ${showAllMosques ? "rotate-90" : ""}`}
             />
-          </Link>
+          </button>
         </div>
         {mosques.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {mosques.map((mosque, index) => (
+            {displayedMosques.map((mosque, index) => (
               <MosqueCard
                 key={`${mosque.name}-${index}`}
                 mosque={mosque}

@@ -1,29 +1,20 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   Filter,
-  MapPin,
-  Star,
-  Navigation,
-  Clock,
-  CalendarDays,
-  MessageCircle,
   X,
-  Download,
-  Calendar,
 } from "lucide-react";
 import { Inter, Lato } from "next/font/google";
 import { mosqueService } from "../../services/mosque";
+import MosqueCard from "@/app/components/cards/MosqueCard";
 
-const inter = Inter({
-  subsets: ["latin"],
-});
-const lato = Lato({
-  subsets: ["latin"],
-  weight: ["400"],
-});
+const inter = Inter({ subsets: ["latin"] });
+const lato = Lato({ subsets: ["latin"], weight: ["400"] });
+
+//new logics
+const DEFAULT_VISIBLE_MOSQUES = 6;
 
 const monthName = (monthIndex) =>
   new Date(2026, monthIndex, 1).toLocaleString("en-US", { month: "long" });
@@ -40,251 +31,202 @@ const formatTimeShort = (value) => {
   }
 };
 
-export default function FindMosque() {
-  const [selectedMosque, setSelectedMosque] = useState(null);
+const haversineDistanceKm = (lat1, lon1, lat2, lon2) => {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+const toNumber = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+
+
+
+
+
+
+
+
+
+
+
+export default function FindMosque({ currentLocation, refreshKey }) {
+
+  //new
   const [mosques, setMosques] = useState([]);
-  const [searchValue, setSearchValue] = useState("");
-  const [jumuahOnly, setJumuahOnly] = useState(false);
-  const [favoriteIds, setFavoriteIds] = useState(new Set());
-  const [loading, setLoading] = useState(false);
+  const [selectedMosque, setSelectedMosque] = useState(null);
   const [timetableLoading, setTimetableLoading] = useState(false);
   const [timetableData, setTimetableData] = useState([]);
-  const [activeMonth, setActiveMonth] = useState(new Date().getMonth());
-  const [activeYear, setActiveYear] = useState(new Date().getFullYear());
-
-  const loadFavorites = async () => {
-    try {
-      const favoritesResponse = await mosqueService.getFavorites();
-      const ids = new Set(
-        (Array.isArray(favoritesResponse) ? favoritesResponse : [])
-          .map((item) => item?.mosque?.id)
-          .filter(Boolean)
-      );
-      setFavoriteIds(ids);
-    } catch {
-      setFavoriteIds(new Set());
-    }
-  };
-
-  const buildMosqueItem = (mosque, prayerTimes = null) => ({
-    id: mosque.id,
-    name: mosque.name,
-    city: mosque.city_name || "Dhaka",
-    address: mosque.address || "Bangladesh",
-    latitude: mosque.latitude ? Number(mosque.latitude) : null,
-    longitude: mosque.longitude ? Number(mosque.longitude) : null,
-    distanceText: mosque.distance_km != null ? `${mosque.distance_km} km away` : null,
-    nextPrayer: prayerTimes,
-  });
-
-  const fetchPrayerTimesForMosques = async (items) => {
-    return Promise.all(
-      items.map(async (mosque) => {
-        let prayerTimes = null;
-        try {
-          const pt = await mosqueService.getPrayerTimes(mosque.id);
-          const idx = pt?.next_prayer_index;
-          if (pt?.prayer_times && idx != null) {
-            const next = pt.prayer_times[idx];
-            prayerTimes = { name: next?.name, time: next?.jamaah || next?.time };
-          }
-        } catch { /* ignore */ }
-        return buildMosqueItem(mosque, prayerTimes);
-      })
-    );
-  };
-
-  const fetchMosques = async (params = {}) => {
-    setLoading(true);
-    try {
-      const response = await mosqueService.list(params);
-      const items = Array.isArray(response)
-        ? response
-        : Array.isArray(response?.results)
-          ? response.results
-          : [];
-      const built = await fetchPrayerTimesForMosques(items);
-      setMosques(built);
-    } catch (error) {
-      console.error("Failed to fetch mosques:", error);
-      setMosques([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [showAllMosques, setShowAllMosques] = useState(false);
+  const [liveLocation, setLiveLocation] = useState(null);
+  const [activeMonth] = useState(new Date().getMonth());
+  const [activeYear] = useState(new Date().getFullYear());
+  const geocodeCacheRef = useRef(new Map());
+  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   useEffect(() => {
-    loadFavorites();
-    fetchMosques();
+    if (!navigator.geolocation) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        setLiveLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      () => { },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      const params = {};
-      if (searchValue.trim()) {
-        params.search = searchValue.trim();
-      }
-      if (jumuahOnly) {
-        params.has_jumuah = true;
-      }
-      fetchMosques(params);
-    }, 350);
+    const fetchMosques = async () => {
+      try {
+        let response = [];
+        let favoriteIds = new Set();
+        const liveLat = toNumber(liveLocation?.latitude);
+        const liveLng = toNumber(liveLocation?.longitude);
+        const currentLat = toNumber(currentLocation?.latitude);
+        const currentLng = toNumber(currentLocation?.longitude);
+        const queryLat = liveLat ?? currentLat;
+        const queryLng = liveLng ?? currentLng;
 
-    return () => clearTimeout(timeout);
-  }, [searchValue, jumuahOnly]);
+        try {
+          const favoritesResponse = await mosqueService.getFavorites();
+          const favorites = Array.isArray(favoritesResponse) ? favoritesResponse : [];
+          favoriteIds = new Set(favorites.map((item) => item?.mosque?.id).filter(Boolean));
+        } catch {
+          favoriteIds = new Set();
+        }
+
+        if (queryLat !== null && queryLng !== null) {
+          response = await mosqueService.getNearby(
+            queryLat,
+            queryLng,
+            10
+          );
+
+          const nearbyItems = Array.isArray(response)
+            ? response
+            : Array.isArray(response?.results)
+              ? response.results
+              : [];
+
+          // If no nearby result, fall back to general mosque list so cards remain visible.
+          if (nearbyItems.length === 0) {
+            response = await mosqueService.list();
+          }
+        } else {
+          response = await mosqueService.list();
+        }
+
+        const items = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.results)
+            ? response.results
+            : [];
+
+        const geocodeMosque = async (mosque) => {
+          if (!googleMapsApiKey) return { lat: null, lng: null };
+
+          const addressParts = [mosque?.address, mosque?.city_name, "Bangladesh"]
+            .filter(Boolean)
+            .join(", ");
+          if (!addressParts) return { lat: null, lng: null };
+
+          if (geocodeCacheRef.current.has(addressParts)) {
+            return geocodeCacheRef.current.get(addressParts);
+          }
+
+          try {
+            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addressParts)}&key=${googleMapsApiKey}`;
+            const res = await fetch(url);
+            if (!res.ok) return { lat: null, lng: null };
+            const data = await res.json();
+            const loc = data?.results?.[0]?.geometry?.location;
+            const result = {
+              lat: toNumber(loc?.lat),
+              lng: toNumber(loc?.lng),
+            };
+            geocodeCacheRef.current.set(addressParts, result);
+            return result;
+          } catch {
+            return { lat: null, lng: null };
+          }
+        };
+
+        const formatted = await Promise.all(items.map(async (mosque) => {
+          let mosqueLat = toNumber(mosque.latitude);
+          let mosqueLng = toNumber(mosque.longitude);
+          if (mosqueLat === null || mosqueLng === null) {
+            const geo = await geocodeMosque(mosque);
+            mosqueLat = geo.lat;
+            mosqueLng = geo.lng;
+          }
+          const userLat = queryLat;
+          const userLng = queryLng;
+
+          let distance = null;
+          if (
+            userLat !== null &&
+            userLng !== null &&
+            mosqueLat !== null &&
+            mosqueLng !== null
+          ) {
+            distance = haversineDistanceKm(userLat, userLng, mosqueLat, mosqueLng).toFixed(1);
+          }
+
+          return {
+            id: mosque.id,
+            name: mosque.name,
+            location: mosque.city_name || mosque.address || "Dhaka",
+            latitude: mosqueLat,
+            longitude: mosqueLng,
+            distance,
+            prayer: "Dhuhr",
+            time: "12:30 PM",
+            isFavorite: favoriteIds.has(mosque.id),
+          };
+        }));
+
+        setMosques(formatted);
+      } catch {
+        setMosques([]);
+      }
+    };
+
+    fetchMosques();
+  }, [currentLocation?.latitude, currentLocation?.longitude, liveLocation?.latitude, liveLocation?.longitude, refreshKey, googleMapsApiKey]);
+
+  const handleFavoriteChanged = (mosqueId, isFavorite) => {
+    setMosques((prev) =>
+      prev.map((item) =>
+        item.id === mosqueId ? { ...item, isFavorite } : item
+      )
+    );
+  };
+
+
+
+
 
   useEffect(() => {
     return () => {
       document.body.style.overflow = "unset";
     };
   }, []);
-
-  const handleUseMyLocation = async () => {
-    if (!navigator.geolocation) {
-      return;
-    }
-
-    setLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const response = await mosqueService.getNearby(
-            position.coords.latitude,
-            position.coords.longitude,
-            10
-          );
-          const items = Array.isArray(response) ? response : [];
-          const built = await fetchPrayerTimesForMosques(items);
-          setMosques(built);
-        } catch (error) {
-          console.error("Failed to load nearby mosques:", error);
-        } finally {
-          setLoading(false);
-        }
-      },
-      () => {
-        setLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
-
-  const handleToggleFavorite = async (mosqueId) => {
-    try {
-      if (favoriteIds.has(mosqueId)) {
-        await mosqueService.removeFavorite(mosqueId);
-        setFavoriteIds((prev) => {
-          const next = new Set(prev);
-          next.delete(mosqueId);
-          return next;
-        });
-      } else {
-        await mosqueService.addFavorite(mosqueId);
-        setFavoriteIds((prev) => new Set(prev).add(mosqueId));
-      }
-    } catch (error) {
-      if (error?.response?.status === 401 && typeof window !== "undefined") {
-        const returnUrl = encodeURIComponent(window.location.pathname);
-        window.location.href = `/login?returnUrl=${returnUrl}`;
-        return;
-      }
-      console.error("Failed to toggle favorite:", error);
-    }
-  };
-
-  const openModal = (mosque) => {
-    setSelectedMosque(mosque);
-    setTimetableData([]);
-    document.body.style.overflow = "hidden";
-  };
-
-  const closeModal = () => {
-    setSelectedMosque(null);
-    document.body.style.overflow = "unset";
-  };
-
-  const prevMonth = () => {
-    if (activeMonth === 0) { setActiveMonth(11); setActiveYear((y) => y - 1); }
-    else setActiveMonth((m) => m - 1);
-  };
-
-  const nextMonth = () => {
-    if (activeMonth === 11) { setActiveMonth(0); setActiveYear((y) => y + 1); }
-    else setActiveMonth((m) => m + 1);
-  };
-
-  useEffect(() => {
-    if (!selectedMosque) return;
-    let cancelled = false;
-    const fetchTimetable = async () => {
-      setTimetableLoading(true);
-      setTimetableData([]);
-      try {
-        const response = await mosqueService.getMonthlyTimetable(selectedMosque.id, {
-          month: activeMonth + 1,
-          year: activeYear,
-        });
-        if (cancelled) return;
-        const rows = Array.isArray(response)
-          ? response
-          : Array.isArray(response?.results)
-            ? response.results
-            : [];
-        setTimetableData(rows.map((row) => ({
-          date: `${row.day} ${monthName((row.month || activeMonth + 1) - 1)} ${row.year || activeYear}`,
-          fajr: { a: formatTimeShort(row.fajr_adhan), i: formatTimeShort(row.fajr_iqamah) },
-          sunrise: formatTimeShort(row.sunrise),
-          dhuhr: { a: formatTimeShort(row.dhuhr_adhan), i: formatTimeShort(row.dhuhr_iqamah) },
-          asr: { a: formatTimeShort(row.asr_adhan), i: formatTimeShort(row.asr_iqamah) },
-          maghrib: { a: formatTimeShort(row.maghrib_adhan), i: formatTimeShort(row.maghrib_iqamah) },
-          isha: { a: formatTimeShort(row.isha_adhan), i: formatTimeShort(row.isha_iqamah) },
-        })));
-      } catch (error) {
-        console.error("Failed to fetch monthly timetable:", error);
-        if (!cancelled) setTimetableData([]);
-      } finally {
-        if (!cancelled) setTimetableLoading(false);
-      }
-    };
-    fetchTimetable();
-    return () => { cancelled = true; };
-  }, [selectedMosque, activeMonth, activeYear]);
-
-  const resultsCount = useMemo(() => mosques.length, [mosques]);
-
-  const mapCenter = useMemo(() => {
-    const withCoordinates = mosques.find(
-      (mosque) => Number.isFinite(mosque.latitude) && Number.isFinite(mosque.longitude)
-    );
-
-    if (withCoordinates) {
-      return {
-        latitude: withCoordinates.latitude,
-        longitude: withCoordinates.longitude,
-      };
-    }
-
-    return {
-      latitude: 23.8103,
-      longitude: 90.4125,
-    };
-  }, [mosques]);
-
-  const mapEmbedUrl = useMemo(() => {
-    const delta = 0.05;
-    const left = mapCenter.longitude - delta;
-    const right = mapCenter.longitude + delta;
-    const top = mapCenter.latitude + delta;
-    const bottom = mapCenter.latitude - delta;
-
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${left}%2C${bottom}%2C${right}%2C${top}&layer=mapnik&marker=${mapCenter.latitude}%2C${mapCenter.longitude}`;
-  }, [mapCenter.latitude, mapCenter.longitude]);
-
-  const mapLargerUrl = useMemo(
-    () =>
-      `https://www.openstreetmap.org/?mlat=${mapCenter.latitude}&mlon=${mapCenter.longitude}#map=13/${mapCenter.latitude}/${mapCenter.longitude}`,
-    [mapCenter.latitude, mapCenter.longitude]
-  );
 
   const downloadTimetable = (format) => {
     if (!selectedMosque || !timetableData.length) {
@@ -340,13 +282,132 @@ export default function FindMosque() {
     link.click();
   };
 
+  const displayedMosques = showAllMosques
+    ? mosques
+    : mosques.slice(0, DEFAULT_VISIBLE_MOSQUES);
+  const canToggleViewAll = mosques.length > DEFAULT_VISIBLE_MOSQUES;
+  console.log(mosques);
+
+
+
+
+
+
+  // previous
+
+  const [searchValue, setSearchValue] = useState("");
+  const [jumuahOnly, setJumuahOnly] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState(new Set());
+  const [loading, setLoading] = useState(false);
+
+  // 1. Setup Live Location Watcher
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        setLiveLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      () => { },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  // 2. Geocoding helper
+  const geocodeMosque = async (mosque) => {
+    if (!googleMapsApiKey) return { lat: null, lng: null };
+    const addressParts = [mosque?.address, mosque?.city_name, "Bangladesh"]
+      .filter(Boolean)
+      .join(", ");
+    if (!addressParts) return { lat: null, lng: null };
+    if (geocodeCacheRef.current.has(addressParts)) return geocodeCacheRef.current.get(addressParts);
+
+    try {
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addressParts)}&key=${googleMapsApiKey}`;
+      const res = await fetch(url);
+      if (!res.ok) return { lat: null, lng: null };
+      const data = await res.json();
+      const loc = data?.results?.[0]?.geometry?.location;
+      const result = { lat: toNumber(loc?.lat), lng: toNumber(loc?.lng) };
+      geocodeCacheRef.current.set(addressParts, result);
+      return result;
+    } catch {
+      return { lat: null, lng: null };
+    }
+  };
+
+
+
+
+  const handleToggleFavorite = async (mosqueId) => {
+    try {
+      if (favoriteIds.has(mosqueId)) {
+        await mosqueService.removeFavorite(mosqueId);
+        setFavoriteIds((prev) => {
+          const next = new Set(prev);
+          next.delete(mosqueId);
+          return next;
+        });
+      } else {
+        await mosqueService.addFavorite(mosqueId);
+        setFavoriteIds((prev) => new Set(prev).add(mosqueId));
+      }
+    } catch (error) {
+      if (error?.response?.status === 401) window.location.href = "/login";
+    }
+  };
+
+  const openModal = (mosque) => {
+    setSelectedMosque(mosque);
+    document.body.style.overflow = "hidden";
+  };
+
+  const closeModal = () => {
+    setSelectedMosque(null);
+    document.body.style.overflow = "unset";
+  };
+
+  // Timetable Fetching
+  useEffect(() => {
+    if (!selectedMosque) return;
+    const loadTimetable = async () => {
+      setTimetableLoading(true);
+      try {
+        const res = await mosqueService.getMonthlyTimetable(selectedMosque.id, {
+          month: activeMonth + 1,
+          year: activeYear,
+        });
+        const rows = Array.isArray(res) ? res : res?.results || [];
+        setTimetableData(rows.map(row => ({
+          date: `${row.day} ${monthName(activeMonth)} ${activeYear}`,
+          fajr: { a: formatTimeShort(row.fajr_adhan), i: formatTimeShort(row.fajr_iqamah) },
+          sunrise: formatTimeShort(row.sunrise),
+          dhuhr: { a: formatTimeShort(row.dhuhr_adhan), i: formatTimeShort(row.dhuhr_iqamah) },
+          asr: { a: formatTimeShort(row.asr_adhan), i: formatTimeShort(row.asr_iqamah) },
+          maghrib: { a: formatTimeShort(row.maghrib_adhan), i: formatTimeShort(row.maghrib_iqamah) },
+          isha: { a: formatTimeShort(row.isha_adhan), i: formatTimeShort(row.isha_iqamah) },
+        })));
+      } catch { setTimetableData([]); }
+      finally { setTimetableLoading(false); }
+    };
+    loadTimetable();
+  }, [selectedMosque, activeMonth, activeYear]);
+
+  const mapCenter = useMemo(() => ({
+    lat: mosques[0]?.latitude || 23.8103,
+    lng: mosques[0]?.longitude || 90.4125
+  }), [mosques]);
+
+  const mapEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${mapCenter.lng - 0.05}%2C${mapCenter.lat - 0.05}%2C${mapCenter.lng + 0.05}%2C${mapCenter.lat + 0.05}&layer=mapnik&marker=${mapCenter.lat}%2C${mapCenter.lng}`;
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] pb-20 relative">
-      {/* Hero Header Section */}
+      {/* Hero Header */}
       <div className="py-[196px] text-center bg-gradient-to-b from-[#1F8A5B] to-[#1F6F8B] w-full">
-        <h1
-          className={`font-bold text-4xl md:text-[66px] text-white ${lato.className}`}
-        >
+        <h1 className={`font-bold text-4xl md:text-[66px] text-white ${lato.className}`}>
           <span className="text-[#26FFA0] italic">Find</span> a Mosque
         </h1>
         <p className={`md:text-2xl text-[#D0E0FF] ${inter.className} mt-4`}>
@@ -354,336 +415,97 @@ export default function FindMosque() {
         </p>
       </div>
 
-      {/* Main Content Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 -mt-10">
-        {/* Search and Filter Bar */}
-        <div className="bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.06)] p-2 md:p-3 flex flex-col md:flex-row items-center gap-3 mb-8">
+        {/* Search Bar */}
+        <div className="bg-white rounded-xl shadow-lg p-3 flex flex-col md:flex-row items-center gap-3 mb-8">
           <div className="relative flex-1 w-full">
-            <Search
-              size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-            />
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Search by mosque name or area..."
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 text-sm text-slate-700 focus:outline-none placeholder:text-gray-400 bg-transparent"
+              className="w-full pl-12 pr-4 py-3 text-sm focus:outline-none bg-transparent"
             />
           </div>
-
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <button
-              onClick={() => setJumuahOnly((prev) => !prev)}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold transition-colors ${jumuahOnly
-                  ? "bg-[#1E8A5E] text-white hover:bg-[#17734d]"
-                  : "bg-[#F2F9F5] text-[#238B57] hover:bg-[#e4f2eb]"
-                }`}
-            >
-              <Filter size={16} /> {jumuahOnly ? "Jumuah Only" : "Filters"}
-            </button>
-            <button
-              onClick={handleUseMyLocation}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#1E8A5E] text-white px-6 py-3 rounded-lg text-sm font-semibold hover:bg-[#17734d] transition-colors shadow-sm"
-            >
-              <Navigation size={16} className="rotate-45 -ml-1" /> Use My
-              Location
-            </button>
-          </div>
+          <button
+            onClick={() => setJumuahOnly(!jumuahOnly)}
+            className={`px-6 py-3 rounded-lg text-sm font-semibold transition-colors ${jumuahOnly ? "bg-[#1E8A5E] text-white" : "bg-[#F2F9F5] text-[#238B57]"}`}
+          >
+            <Filter size={16} className="inline mr-2" /> {jumuahOnly ? "Jumuah Only" : "Filters"}
+          </button>
+          <button className="btn text-white bg-[#1F8A5B] rounded-lg">Use My Location</button>
         </div>
 
-        {/* Results Header */}
-        <div className="mb-4 text-sm text-slate-500">
-          Found <span className="font-bold text-slate-800">{resultsCount}</span> mosques
-          {jumuahOnly && (
-            <span className="ml-2 text-[#238B57] font-medium">(Jumuah filter on)</span>
-          )}
-        </div>
-
-        {/* Grid Layout: Map & Cards */}
+        {/* Results Layout */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Left Column: Map View */}
-          <div className="md:col-span-5 h-[400px] md:h-[calc(100vh-320px)] md:sticky md:top-6 rounded-xl overflow-hidden shadow-sm border border-gray-100 bg-[#E5E3DF] relative">
-            <iframe
-              title="Map"
-              src={mapEmbedUrl}
-              className="absolute inset-0 w-full h-full border-0"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              allowFullScreen
-            />
-            <a
-              href={mapLargerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="absolute top-4 left-4 bg-white px-3 py-1.5 rounded shadow text-xs font-medium text-[#238B57] z-10"
-            >
-              View larger map
-            </a>
+          {/* Map Column */}
+          <div className="md:col-span-5 h-[400px] md:h-[calc(100vh-320px)] md:sticky md:top-6 rounded-xl overflow-hidden shadow-sm bg-[#E5E3DF] relative">
+            <iframe title="Map" src={mapEmbedUrl} className="absolute inset-0 w-full h-full border-0" />
           </div>
 
-          {/* Right Column: Mosque Cards */}
+          {/* Mosque List Column */}
           <div className="md:col-span-7 space-y-4">
+            {loading ? (
+              <div className="p-10 text-center text-slate-500">Searching mosques...</div>
+            ) : (
+              mosques.map((mosque) => (
+                <MosqueCard
+                  key={mosque.id}
+                  mosque={mosque}
+                  onFavoriteChanged={handleFavoriteChanged}
+                  onViewMonthlyTimetable={openModal}
+                />
+              ))
+            )}
             {!loading && mosques.length === 0 && (
-              <div className="bg-white rounded-xl p-6 text-sm text-slate-500 border border-gray-100">
-                No mosques found.
+              <div className="bg-white rounded-xl p-10 text-center text-slate-500 border border-dashed">
+                No mosques found in this area.
               </div>
             )}
-
-            {mosques.map((mosque, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-xl p-5 md:p-6 shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 relative hover:shadow-md transition-shadow"
-              >
-                <button
-                  onClick={() => handleToggleFavorite(mosque.id)}
-                  className="absolute top-5 right-5 text-[#F59E0B] hover:scale-110 transition-transform"
-                >
-                  <Star
-                    size={20}
-                    strokeWidth={1.5}
-                    fill={favoriteIds.has(mosque.id) ? "currentColor" : "none"}
-                  />
-                </button>
-
-                <div className="flex gap-4 mb-5">
-                  <div className="w-14 h-14 bg-[#1E6B65] rounded-xl flex items-center justify-center text-2xl shadow-inner flex-shrink-0">
-                    🕌
-                  </div>
-                  <div>
-                    <h3 className="text-[16px] font-bold text-slate-800 pr-8">
-                      {mosque.name}
-                    </h3>
-                    <div className="flex flex-col text-[13px] text-slate-500 mt-1">
-                      <span className="flex items-center gap-1.5">
-                        <MapPin size={12} /> {mosque.city}
-                      </span>
-                      <span className="ml-4.5">{mosque.address}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-4 text-[13px] text-slate-600 mb-5">
-                  {mosque.distanceText && (
-                    <div className="flex items-center gap-1.5 font-medium">
-                      <Navigation size={14} className="text-[#238B57] rotate-45" />
-                      <span>{mosque.distanceText}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1.5 font-medium">
-                    <Clock size={14} className="text-[#238B57]" />
-                    <span>
-                      {mosque.nextPrayer
-                        ? `Next: ${mosque.nextPrayer.name} - ${mosque.nextPrayer.time}`
-                        : "Next prayer time unavailable"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-gray-50">
-                  <button
-                    onClick={() => openModal(mosque)}
-                    className="flex items-center gap-2 text-[13px] font-bold text-[#1E7461] hover:text-[#165a4b] transition-colors"
-                  >
-                    <CalendarDays size={16} />
-                    View Monthly Timetable
-                  </button>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
 
-      {/* ========================================= */}
-      {/* TIMETABLE MODAL */}
-      {/* ========================================= */}
+      {/* Timetable Modal */}
       {selectedMosque && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="bg-[#1C815A] px-6 py-4 flex items-start justify-between text-white shrink-0">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden">
+            <div className="bg-[#1C815A] px-6 py-4 flex items-center justify-between text-white">
               <div>
-                <h2 className="text-xl font-bold">Monthly Prayer Timetable</h2>
-                <p className="text-sm text-white/80 mt-1">{selectedMosque.name}</p>
+                <h2 className="text-xl font-bold">Monthly Timetable</h2>
+                <p className="text-sm opacity-80">{selectedMosque.name}</p>
               </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={prevMonth}
-                  className="text-white hover:bg-white/20 p-1.5 rounded-lg transition-colors"
-                  title="Previous month"
-                >
-                  &#8249;
-                </button>
-                <span className="text-white font-semibold text-sm whitespace-nowrap">
-                  {monthName(activeMonth)} {activeYear}
-                </span>
-                <button
-                  onClick={nextMonth}
-                  className="text-white hover:bg-white/20 p-1.5 rounded-lg transition-colors"
-                  title="Next month"
-                >
-                  &#8250;
-                </button>
-                <button
-                  onClick={closeModal}
-                  className="text-white hover:bg-white/20 p-1.5 rounded-lg transition-colors ml-2"
-                >
-                  <X size={24} />
-                </button>
-              </div>
+              <button onClick={closeModal} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                <X size={24} />
+              </button>
             </div>
-
-            {/* Top Dotted Border Separator */}
-            <div className="w-full border-b-[3px] border-dotted border-[#5B9BD5] opacity-50"></div>
-
-            {/* Modal Body (Scrollable) */}
-            <div className="flex-1 overflow-y-auto px-6 py-4 bg-white">
-              {/* Legend */}
-              <div className="bg-[#F2F8F5] border border-gray-100 rounded-lg p-3 mb-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-sm">
-                <span className="font-bold text-slate-700">
-                  Prayer Time Legend
-                </span>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1.5 text-slate-500 font-medium">
-                    <div className="w-2.5 h-2.5 rounded-full bg-slate-400"></div>
-                    Adhan (Beginning Time)
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[#238B57] font-medium">
-                    <div className="w-2.5 h-2.5 rounded-sm bg-[#238B57]"></div>
-                    Iqamah (Congregation Time)
-                  </div>
-                </div>
-              </div>
-
-              {/* Timetable */}
-              <div className="overflow-x-auto rounded-lg border border-[#D1E5D9]">
-                <table className="w-full text-center border-collapse whitespace-nowrap">
-                  {/* Table Header */}
-                  <thead className="bg-[#1C815A] text-white">
-                    <tr>
-                      <th className="py-3 px-4 font-semibold text-left border-r border-white/20 w-32">
-                        Date
-                      </th>
-                      {["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"].map(
-                        (prayer) => (
-                          <th
-                            key={prayer}
-                            className="py-2 px-2 font-medium border-r border-white/20 w-24"
-                          >
-                            <div className="font-bold">{prayer}</div>
-                            <div className="text-[10px] text-white/70 font-normal">
-                              Adhan / Iqamah
-                            </div>
-                          </th>
-                        ),
-                      )}
-                      <th className="py-2 px-2 font-medium border-white/20 w-20">
-                        <div className="font-bold">Sunrise</div>
-                        <div className="text-[10px] text-white/70 font-normal">Time</div>
-                      </th>
-                    </tr>
-                  </thead>
-                  {/* Table Body */}
-                  <tbody>
-                    {timetableLoading && (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="py-8 text-sm text-slate-500"
-                        >
-                          Loading timetable...
-                        </td>
-                      </tr>
-                    )}
-
-                    {!timetableLoading && timetableData.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="py-8 text-sm text-slate-500"
-                        >
-                          No timetable data available for this month.
-                        </td>
-                      </tr>
-                    )}
-
-                    {!timetableLoading && timetableData.map((row, idx) => (
-                      <tr
-                        key={idx}
-                        className="border-b border-[#D1E5D9] hover:bg-[#F9FCFA] transition-colors"
-                      >
-                        <td className="py-2.5 px-4 text-sm font-semibold text-slate-700 text-left border-r border-[#D1E5D9]">
-                          {row.date}
-                        </td>
-                        {[
-                          row.fajr,
-                          row.dhuhr,
-                          row.asr,
-                          row.maghrib,
-                          row.isha,
-                        ].map((time, tIdx) => (
-                          <td
-                            key={tIdx}
-                            className="py-2.5 px-2 border-r border-[#D1E5D9]"
-                          >
-                            <div className="text-xs text-slate-500 font-medium mb-0.5">
-                              {time.a}
-                            </div>
-                            <div className="text-xs text-[#238B57] font-bold">
-                              {time.i}
-                            </div>
-                          </td>
-                        ))}
-                        <td className="py-2.5 px-2 border-[#D1E5D9]">
-                          <div className="text-xs text-slate-500 font-medium">{row.sunrise}</div>
-                        </td>
-                      </tr>
+            <div className="flex-1 overflow-auto p-6">
+              <table className="w-full text-sm border-collapse">
+                <thead className="bg-slate-50 sticky top-0">
+                  <tr>
+                    <th className="p-3 text-left border-b font-bold">Date</th>
+                    {["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"].map(p => (
+                      <th key={p} className="p-3 border-b font-bold">{p}</th>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Note Footer inside content */}
-              <div className="mt-4 flex items-start gap-2 bg-[#F8FAFC] p-3 rounded-lg border border-gray-100 text-xs text-slate-500">
-                <Calendar
-                  size={14}
-                  className="mt-0.5 text-slate-400 shrink-0"
-                />
-                <p>
-                  <span className="font-bold text-slate-600">Note:</span> Prayer
-                  times may vary slightly. Please confirm with the mosque
-                  administration. Times shown are for {monthName(activeMonth)} {activeYear}.
-                </p>
-              </div>
-            </div>
-
-            {/* Bottom Dotted Border Separator */}
-            <div className="w-full border-t-[3px] border-dotted border-[#5B9BD5] opacity-50"></div>
-
-            {/* Modal Footer */}
-            <div className="bg-white p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
-              <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
-                <Calendar size={16} className="text-[#EA4335]" />
-                Updated for {monthName(activeMonth)} {activeYear}
-              </div>
-
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <button
-                  onClick={() => downloadTimetable("jpg")}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#2C7B65] hover:bg-[#226350] text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
-                >
-                  <Download size={16} />
-                  Download JPG
-                </button>
-                <button
-                  onClick={() => downloadTimetable("pdf")}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#238B57] hover:bg-[#1A6E44] text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
-                >
-                  <Download size={16} />
-                  Download PDF
-                </button>
-              </div>
+                  </tr>
+                </thead>
+                <tbody>
+                  {timetableLoading ? (
+                    <tr><td colSpan={6} className="p-10 text-center">Loading times...</td></tr>
+                  ) : timetableData.map((row, i) => (
+                    <tr key={i} className="border-b hover:bg-slate-50">
+                      <td className="p-3 font-semibold text-slate-700">{row.date}</td>
+                      {[row.fajr, row.dhuhr, row.asr, row.maghrib, row.isha].map((t, ti) => (
+                        <td key={ti} className="p-3 text-center">
+                          <div className="text-[10px] text-slate-400">{t.a}</div>
+                          <div className="font-bold text-[#238B57]">{t.i}</div>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

@@ -461,7 +461,51 @@ export const mosqueService = {
         const response = await mosqueAxios.delete(`/api/mosques/${mosqueId}/imam/monthly-timetable/`, { data: payload });
         return response.data;
     },
+    // ── Announcements ──────────────────────────────────────────────────────
 
+    /**
+     * Get public announcements for a mosque
+     * @param {number} mosqueId
+     * @returns {Promise}
+     */
+    getAnnouncements: async (mosqueId) => {
+        const response = await publicAxios.get(`/api/mosques/${mosqueId}/announcements/`);
+        return response.data;
+    },
+
+    /**
+     * Create an announcement (Imam/admin)
+     * @param {number} mosqueId
+     * @param {{ title: string, body: string, is_active?: boolean }} payload
+     * @returns {Promise}
+     */
+    createAnnouncement: async (mosqueId, payload) => {
+        const response = await mosqueAxios.post(`/api/mosques/${mosqueId}/imam/announcements/`, payload);
+        return response.data;
+    },
+
+    /**
+     * Update an announcement (Imam/admin)
+     * @param {number} mosqueId
+     * @param {number} annId
+     * @param {Object} payload
+     * @returns {Promise}
+     */
+    updateAnnouncement: async (mosqueId, annId, payload) => {
+        const response = await mosqueAxios.patch(`/api/mosques/${mosqueId}/imam/announcements/${annId}/`, payload);
+        return response.data;
+    },
+
+    /**
+     * Delete an announcement (Imam/admin)
+     * @param {number} mosqueId
+     * @param {number} annId
+     * @returns {Promise}
+     */
+    deleteAnnouncement: async (mosqueId, annId) => {
+        const response = await mosqueAxios.delete(`/api/mosques/${mosqueId}/imam/announcements/${annId}/`);
+        return response.data;
+    },
     /**
      * Submit mosque registration request.
      * Goes through the Next.js /api/register-mosque server route so that

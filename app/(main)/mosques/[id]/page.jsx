@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   Bell,
@@ -47,18 +48,11 @@ const prayerMeta = {
   Isha: { label: "Beginning Time", fallback: "isha_beginning", fallbackJamaah: "isha_jamaah" },
 };
 
-const defaultAnnouncements = [
-  {
-    title: "Jumu'ah Khutbah Schedule",
-    body: "First Jumu'ah: 12:30 PM, Second Jumu'ah: 1:30 PM",
-    date: "Every Friday",
-  },
-  {
-    title: "Ramadan Preparation",
-    body: "Special arrangements for Taraweeh prayers will be announced soon.",
-    date: "Community Notice",
-  },
-];
+const toValidCoordinate = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+};
 
 export default function MosqueDetailsPage() {
   const { id } = useParams();
@@ -69,6 +63,8 @@ export default function MosqueDetailsPage() {
   const [mosque, setMosque] = useState(null);
   const [prayerData, setPrayerData] = useState(null);
   const [showMonthly, setShowMonthly] = useState(false);
+  const [announcements, setAnnouncements] = useState([]);
+  const [annLoading, setAnnLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -100,6 +96,18 @@ export default function MosqueDetailsPage() {
       mounted = false;
     };
   }, [id]);
+
+  // Fetch announcements when the tab is first opened
+  useEffect(() => {
+    if (activeTab !== "announcements" || !id) return;
+    let mounted = true;
+    setAnnLoading(true);
+    mosqueService.getAnnouncements(id)
+      .then((data) => { if (mounted) setAnnouncements(Array.isArray(data) ? data : []); })
+      .catch(() => { if (mounted) setAnnouncements([]); })
+      .finally(() => { if (mounted) setAnnLoading(false); });
+    return () => { mounted = false; };
+  }, [activeTab, id]);
 
   const prayerRows = useMemo(() => {
     const order = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
@@ -154,49 +162,50 @@ export default function MosqueDetailsPage() {
   );
 
   const mapCenter = useMemo(() => {
-    const latitude = Number(mosque?.latitude);
-    const longitude = Number(mosque?.longitude);
+    const latitude = toValidCoordinate(mosque?.latitude);
+    const longitude = toValidCoordinate(mosque?.longitude);
 
-    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    if (latitude !== null && longitude !== null) {
       return { latitude, longitude };
     }
 
     return { latitude: 23.8103, longitude: 90.4125 };
   }, [mosque?.latitude, mosque?.longitude]);
 
+  const mapQuery = useMemo(() => {
+    const latitude = toValidCoordinate(mosque?.latitude);
+    const longitude = toValidCoordinate(mosque?.longitude);
+
+    if (latitude !== null && longitude !== null) {
+      return `${latitude},${longitude}`;
+    }
+
+    const fallbackAddress = [mosque?.address, mosque?.city_name, "Bangladesh"]
+      .filter(Boolean)
+      .join(", ");
+
+    return fallbackAddress || `${mapCenter.latitude},${mapCenter.longitude}`;
+  }, [mosque?.latitude, mosque?.longitude, mosque?.address, mosque?.city_name, mapCenter.latitude, mapCenter.longitude]);
+
+  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
   const mapEmbedUrl = useMemo(() => {
-    return `https://maps.google.com/maps?q=${mapCenter.latitude},${mapCenter.longitude}&z=15&output=embed`;
-  }, [mapCenter.latitude, mapCenter.longitude]);
+    if (googleMapsApiKey) {
+      return `https://www.google.com/maps/embed/v1/place?key=${googleMapsApiKey}&q=${encodeURIComponent(mapQuery)}&zoom=15`;
+    }
+
+    return `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=15&output=embed`;
+  }, [googleMapsApiKey, mapQuery]);
 
   const directionsUrl = useMemo(
-    () => `https://www.google.com/maps/dir/?api=1&destination=${mapCenter.latitude},${mapCenter.longitude}`,
-    [mapCenter.latitude, mapCenter.longitude]
+    () => `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapQuery)}`,
+    [mapQuery]
   );
 
   const mapLargerUrl = useMemo(
-    () => `https://www.google.com/maps?q=${mapCenter.latitude},${mapCenter.longitude}&z=15`,
-    [mapCenter.latitude, mapCenter.longitude]
+    () => `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=15`,
+    [mapQuery]
   );
-
-  const announcements = useMemo(() => {
-    const dynamic = [];
-
-    if (mosque?.additional_info) {
-      dynamic.push({
-        title: "Mosque Update",
-        body: mosque.additional_info,
-        date: mosque?.updated_at
-          ? new Date(mosque.updated_at).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })
-          : "Recent",
-      });
-    }
-
-    return dynamic.length ? dynamic : defaultAnnouncements;
-  }, [mosque?.additional_info, mosque?.updated_at]);
 
   return (
     <div className={`min-h-screen bg-[#F2F4F6] pb-10 ${inter.className}`}>
@@ -227,12 +236,12 @@ export default function MosqueDetailsPage() {
               <p className="text-xs md:text-sm text-[#62758C]">Subscribe to receive updates from this mosque</p>
             </div>
           </div>
-          <button
-            type="button"
+          <Link
+            href={id ? `/subscribe?mosqueId=${id}` : "/subscribe"}
             className="bg-[#1E8A5E] text-white text-xs md:text-sm font-medium px-4 py-2 rounded-lg inline-flex items-center gap-1 hover:bg-[#19724d] transition-colors"
           >
             Subscribe <ChevronRight size={14} />
-          </button>
+          </Link>
         </div>
 
         <section className="mt-3 rounded-xl border border-[#DDE5EA] bg-white overflow-hidden">
@@ -243,11 +252,10 @@ export default function MosqueDetailsPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-3 text-xs md:text-sm border-b-2 whitespace-nowrap transition-colors ${
-                    activeTab === tab.id
+                  className={`px-4 py-3 text-xs md:text-sm border-b-2 whitespace-nowrap transition-colors ${activeTab === tab.id
                       ? "border-[#2A9D6B] text-[#2A9D6B]"
                       : "border-transparent text-[#64748B] hover:text-[#2A9D6B]"
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -292,9 +300,8 @@ export default function MosqueDetailsPage() {
                     return (
                       <div
                         key={row.name}
-                        className={`rounded-lg border p-3 md:p-4 flex items-center justify-between ${
-                          isNext ? "bg-[#ECF8F2] border-[#2A9D6B]" : "bg-white border-[#E5ECF1]"
-                        }`}
+                        className={`rounded-lg border p-3 md:p-4 flex items-center justify-between ${isNext ? "bg-[#ECF8F2] border-[#2A9D6B]" : "bg-white border-[#E5ECF1]"
+                          }`}
                       >
                         <div>
                           <p className="font-semibold text-[#1F2B3A]">{row.name}</p>
@@ -373,19 +380,35 @@ export default function MosqueDetailsPage() {
             {!loading && !error && activeTab === "announcements" && (
               <div>
                 <h2 className={`text-lg font-semibold text-[#1E293B] mb-3 ${poppins.className}`}>Recent Announcements</h2>
-                <div className="space-y-3">
-                  {announcements.map((item, idx) => (
-                    <div key={`${item.title}-${idx}`} className="rounded-lg border border-[#D9E6EF] bg-[#EEF5FA] p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium text-[#223447]">{item.title}</p>
-                          <p className="text-sm text-[#5E738A] mt-1">{item.body}</p>
+                {annLoading && (
+                  <p className="text-sm text-slate-500">Loading announcements...</p>
+                )}
+                {!annLoading && announcements.length === 0 && (
+                  <div className="rounded-lg border border-[#D9E6EF] bg-[#EEF5FA] p-6 text-center">
+                    <p className="text-sm text-[#5E738A]">No announcements at the moment. Check back later.</p>
+                  </div>
+                )}
+                {!annLoading && announcements.length > 0 && (
+                  <div className="space-y-3">
+                    {announcements.map((item) => (
+                      <div key={item.id} className="rounded-lg border border-[#D9E6EF] bg-[#EEF5FA] p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-[#223447]">{item.title}</p>
+                            <p className="text-sm text-[#5E738A] mt-1 whitespace-pre-line">{item.body}</p>
+                          </div>
+                          <span className="text-[11px] text-[#7E91A6] whitespace-nowrap">
+                            {new Date(item.created_at).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </span>
                         </div>
-                        <span className="text-[11px] text-[#7E91A6] whitespace-nowrap">{item.date}</span>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

@@ -35,7 +35,7 @@ const MosqueCard = ({ mosque, onFavoriteChanged, onViewMonthlyTimetable }) => {
       console.error("Failed to update favorite:", error);
     }
   };
-
+  console.log(mosque.distance)
   return (
     <div className="rounded-2xl bg-white shadow-md hover:shadow-lg transition-shadow p-5 border border-gray-100">
       {/* Top Section: Icon and Star */}
@@ -69,23 +69,29 @@ const MosqueCard = ({ mosque, onFavoriteChanged, onViewMonthlyTimetable }) => {
           </Link>
         </h3>
 
-        {/* Location and Distance */}
-        <div
-          className={`text-sm text-[#64748B] flex items-center gap-1.5 ${inter.className} mb-3`}
-        >
-          <MapPin size={14} className="text-[#64748B] flex-shrink-0" />
-          <span>{mosque.location}</span>
-          <span>•</span>
-          <span>{mosque.distance} km</span>
-        </div>
+        <div className="flex justify-between items-center">
+          {/* Location and Distance */}
+          <div
+            className={`text-sm text-[#64748B] flex items-center gap-1.5 ${inter.className} mb-3`}
+          >
+            <MapPin size={14} className="text-[#64748B] flex-shrink-0" />
+            <span>{mosque.location}</span>
+            {mosque.distance !== null && mosque.distance !== undefined && (
+              <>
+                <span>•</span>
+                <span >{mosque.distance !== null ? mosque.distance : "N/A"} km</span>
+              </>
+            )}
+          </div>
 
-        {/* Next Prayer Time */}
-        <div className="flex items-center gap-2 text-sm text-[#64748B] mb-4">
-          <Clock size={14} className="flex-shrink-0" />
-          <span>Next:</span>
-          <span className="text-[#1E293B] font-medium">
-            {mosque.prayer} - {mosque.time}
-          </span>
+          {/* Next Prayer Time */}
+          <div className="flex items-center gap-2 text-sm text-[#64748B] mb-4">
+            <Clock size={14} className="flex-shrink-0" />
+            <span>Next:</span>
+            <span className="text-[#1E293B] font-medium">
+              {mosque.prayer} - {mosque.time}
+            </span>
+          </div>
         </div>
 
         {/* View Monthly Timetable Link */}

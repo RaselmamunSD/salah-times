@@ -10,7 +10,6 @@ import {
   Instagram,
   MessageCircle,
 } from "lucide-react";
-import NewsletterFooter from "./NewsletterFooter";
 
 const nunito = Nunito({ subsets: ["latin"] });
 
@@ -29,7 +28,6 @@ export default function Footer() {
                 src={logo}
                 alt="Salaah Logo"
                 fill
-                sizes="(max-width: 768px) 96px, 96px"
                 className="object-contain"
               />
             </div>
@@ -73,17 +71,34 @@ export default function Footer() {
             <div className="flex flex-col gap-4 text-[#333] text-lg">
               <div className="flex items-center gap-3">
                 <Phone size={20} className="text-black" />
-                <span>+880 1738-060329</span>
+                <span>+1 (555) 123-4567</span>
               </div>
               <div className="flex items-center gap-3">
                 <Mail size={20} className="text-black" />
-                <span>rasel.mamun314@gmail.com</span>
+                <span>info@menthal.com</span>
               </div>
             </div>
           </div>
 
           {/* Section 4: Newsletter */}
-          <NewsletterFooter />
+          <div>
+            <h3 className="text-[#006E3E] font-bold text-xl mb-4">
+              Newsletter
+            </h3>
+            <p className="text-[#333] text-lg mb-6 leading-snug">
+              Subscribe for prayer time updates and important announcements
+            </p>
+            <div className="flex border border-[#1F8A5B] rounded-lg overflow-hidden h-12">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="flex-1 px-4 outline-none text-gray-500 italic w-full"
+              />
+              <button className="bg-[#218E5B] text-white px-2 font-medium hover:bg-[#1a7148] transition-colors">
+                Subscribe
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Bottom Bar */}

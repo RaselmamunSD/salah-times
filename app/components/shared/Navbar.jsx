@@ -153,7 +153,7 @@ export default function Navbar() {
                 height={40}
                 unoptimized
                 onError={() => setFailedAvatarUrl(profileImage)}
-                className="rounded-full border-2 border-gray-100 object-cover"
+                className="hidden lg:block rounded-full border-2 border-gray-100 object-cover"
               />
             ) : (
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#26FFA0] to-[#238B57] border-2 border-gray-100 shadow-sm flex items-center justify-center">
