@@ -1,3 +1,4 @@
+"use client";
 import Image from "next/image";
 import Link from "next/link";
 import logo from "../../../public/logo.png";
@@ -10,10 +11,38 @@ import {
   Instagram,
   MessageCircle,
 } from "lucide-react";
+import { useState } from "react";
 
 const nunito = Nunito({ subsets: ["latin"] });
 
 export default function Footer() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState("idle");
+
+  const handleSubscribe = async () => {
+    if (!email) return;
+
+    setStatus("loading");
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/newsletter/subscribe/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        setStatus("success");
+        setEmail(""); // Clear input on success
+      } else {
+        setStatus("error");
+      }
+    } catch (error) {
+      console.error("Submission error:", error);
+      setStatus("error");
+    }
+  };
   return (
     <footer
       className={`${nunito.className} bg-white pt-16 pb-8 px-4 md:px-10 border-t border-gray-100 md:mt-25`}
@@ -91,12 +120,26 @@ export default function Footer() {
             <div className="flex border border-[#1F8A5B] rounded-lg overflow-hidden h-12">
               <input
                 type="email"
-                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="flex-1 px-4 outline-none text-gray-500 italic w-full"
               />
-              <button className="bg-[#218E5B] text-white px-2 font-medium hover:bg-[#1a7148] transition-colors">
+              <button onClick={handleSubscribe}
+                disabled={status === "loading"} className="bg-[#218E5B] text-white px-2 font-medium hover:bg-[#1a7148] transition-colors">
                 Subscribe
               </button>
+            </div>
+            <div>
+              {status === "success" && (
+                <p className="text-[#10B981] font-medium text-sm mt-2">
+                  Successfully subscribed!
+                </p>
+              )}
+              {status === "error" && (
+                <p className="text-[#EF4444] font-medium text-sm mt-2">
+                  Subscription failed. Please try again.
+                </p>
+              )}
             </div>
           </div>
         </div>

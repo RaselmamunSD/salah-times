@@ -16,10 +16,7 @@ const NewsletterFooter = () => {
         setError('');
 
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-            if (!apiUrl) {
-                throw new Error('API URL not configured');
-            }
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
             const response = await axios.post(
                 `${apiUrl}/api/newsletter/subscribe/`,
