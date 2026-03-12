@@ -81,20 +81,7 @@ export default function SupportSection() {
             href="#"
             className="mt-auto text-[13px] font-semibold text-[#25D366] flex items-center gap-1 hover:opacity-80 transition-opacity"
           >
-            Chat Now
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-              <polyline points="12 5 19 12 12 19"></polyline>
-            </svg>
+            +447444919959
           </a>
         </div>
 
@@ -125,20 +112,8 @@ export default function SupportSection() {
             href="#"
             className="mt-auto text-[13px] font-semibold text-[#2D6A85] flex items-center gap-1 hover:opacity-80 transition-opacity"
           >
-            Email Us
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-              <polyline points="12 5 19 12 12 19"></polyline>
-            </svg>
+            email.salaahtimes@gmail.com
+
           </a>
         </div>
 
@@ -168,7 +143,7 @@ export default function SupportSection() {
             href="#"
             className="mt-auto text-[13px] font-semibold text-[#1A8D5F] flex items-center gap-1 hover:opacity-80 transition-opacity"
           >
-            +880 1XXX-XXXXXX
+            +447444919959
           </a>
         </div>
       </div>

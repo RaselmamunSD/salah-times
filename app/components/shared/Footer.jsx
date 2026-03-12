@@ -100,11 +100,11 @@ export default function Footer() {
             <div className="flex flex-col gap-4 text-[#333] text-lg">
               <div className="flex items-center gap-3">
                 <Phone size={20} className="text-black" />
-                <span>+1 (555) 123-4567</span>
+                <span>+447444919959 </span>
               </div>
               <div className="flex items-center gap-3">
                 <Mail size={20} className="text-black" />
-                <span>info@menthal.com</span>
+                <span>email.salaahtimes@gmail.com</span>
               </div>
             </div>
           </div>

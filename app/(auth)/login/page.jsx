@@ -69,7 +69,7 @@ const LoginPage = () => {
               htmlFor="email"
               className="text-sm font-medium text-[#1b9c5e]"
             >
-              Username or Email *
+              Email *
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -80,7 +80,7 @@ const LoginPage = () => {
                 name="email"
                 type="text"
                 required
-                placeholder="username or your.email@example.com"
+                placeholder="your.email@example.com"
                 className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1b9c5e] focus:border-[#1b9c5e] outline-none transition-colors sm:text-sm placeholder:text-gray-400"
               />
             </div>
