@@ -19,6 +19,7 @@ import Image from "next/image";
 import { useAuth } from "../providers/AuthProvider";
 import { ProtectedRoute } from "../components/ProtectedRoute";
 import Swal from "sweetalert2";
+import { getMediaProxyUrl } from "../utils/media";
 
 const navItems = [
   {
@@ -93,19 +94,7 @@ function DashboardLayoutContent({ children }) {
     .toUpperCase()
     .slice(0, 2);
 
-  const getAbsoluteImageUrl = (url) => {
-    if (!url || url === "null" || url === "undefined") return null;
-    if (url.startsWith("http://") || url.startsWith("https://")) return url;
-
-    const baseUrl =
-      typeof window !== "undefined"
-        ? process.env.NEXT_PUBLIC_API_URL || window.location.origin
-        : process.env.NEXT_PUBLIC_API_URL || "";
-
-    return `${baseUrl}${url}`;
-  };
-
-  const profileImageUrl = getAbsoluteImageUrl(user?.profile_image);
+  const profileImageUrl = getMediaProxyUrl(user?.profile_image);
 
   return (
     <>

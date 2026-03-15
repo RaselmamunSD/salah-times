@@ -11,7 +11,8 @@
  */
 
 export async function GET(request, { params }) {
-    const pathSegments = params.path; // string[]
+    const resolvedParams = await params;
+    const pathSegments = resolvedParams?.path; // string[]
     if (!pathSegments || pathSegments.length === 0) {
         return new Response("Not found", { status: 404 });
     }

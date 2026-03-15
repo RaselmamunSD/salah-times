@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/app/providers/AuthProvider";
 import Image from "next/image";
+import { getMediaProxyUrl } from "@/app/utils/media";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -19,12 +20,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const { user } = useAuth();
   const rawProfileImage = user?.profile_image || "";
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-  const profileImage = rawProfileImage.startsWith("http")
-    ? rawProfileImage
-    : rawProfileImage
-      ? `${apiBaseUrl}${rawProfileImage.startsWith("/") ? "" : "/"}${rawProfileImage}`
-      : "";
+  const profileImage = getMediaProxyUrl(rawProfileImage) || "";
   const hasProfileImage = Boolean(profileImage) && failedAvatarUrl !== profileImage;
   const isActive = (href) =>
     pathname === href ?

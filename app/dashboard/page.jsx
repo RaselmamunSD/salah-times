@@ -9,6 +9,7 @@ import { useAxios } from "../providers/AxiosProvider";
 import { mosqueService } from "../services/mosque";
 import TimeCard from "../components/cards/TimeCard";
 import Swal from "sweetalert2";
+import { getMediaProxyUrl } from "../utils/media";
 
 const DashboardHome = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -112,19 +113,7 @@ const DashboardHome = () => {
     ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username || user.email
     : "User";
 
-  const getAbsoluteImageUrl = (url) => {
-    if (!url || url === "null" || url === "undefined") return null;
-    if (url.startsWith("http://") || url.startsWith("https://")) return url;
-
-    const baseUrl =
-      typeof window !== "undefined"
-        ? process.env.NEXT_PUBLIC_API_URL || window.location.origin
-        : process.env.NEXT_PUBLIC_API_URL || "";
-
-    return `${baseUrl}${url}`;
-  };
-
-  const profileImageUrl = getAbsoluteImageUrl(user?.profile_image);
+  const profileImageUrl = getMediaProxyUrl(user?.profile_image);
 
   if (isImam) {
     return (
@@ -301,7 +290,7 @@ const DashboardHome = () => {
       {/* Prayer Times Section */}
       <div className="bg-white p-8 rounded-2xl shadow-[0_2px_15px_rgba(0,0,0,0.02)] border border-gray-100">
         <h2 className="text-xl font-bold text-[#1E293B] mb-6">
-          Today's Prayer Times
+          Today&apos;s Prayer Times
         </h2>
 
         {prayerLoading ? (
