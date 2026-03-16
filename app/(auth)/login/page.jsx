@@ -3,10 +3,10 @@
 import { ArrowRight, Eye, EyeOff, Lock, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import { useAuth } from "../../providers/AuthProvider";
 
-const LoginPage = () => {
+const LoginPageContent = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -170,5 +170,9 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default function LoginPage() {
+  return <Suspense fallback={<div>Loading...</div>}>
+    <LoginPageContent />
+  </Suspense>
+}
 

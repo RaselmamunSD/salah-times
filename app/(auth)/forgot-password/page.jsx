@@ -2,13 +2,13 @@
 
 import { Mail } from "lucide-react";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { FaArrowLeft } from "react-icons/fa6";
 import authService from "@/app/services/auth";
 
-const ForgotPassword = () => {
+const ForgotPasswordContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState(searchParams.get("email") || "");
@@ -124,4 +124,10 @@ const ForgotPassword = () => {
   );
 };
 
-export default ForgotPassword;
+export default function ForgotPassword() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ForgotPasswordContent />
+    </Suspense>
+  );
+}

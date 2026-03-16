@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import React from "react";
+import React, { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { FaArrowLeft } from "react-icons/fa6";
 import mail from "../../../public/icons/mail.png";
 import Image from "next/image";
-
-const CheckMail = () => {
-  const searchParams = useSearchParams();
+function CheckMailContent() {
+  const searchParams = useSearchParams()  // ← this is the problem
   const email = searchParams.get("email") || "your.email@gmail.com";
   const isGmail = email.toLowerCase().endsWith("@gmail.com");
   const inboxUrl = isGmail
@@ -72,6 +71,13 @@ const CheckMail = () => {
       </div>
     </div>
   );
-};
 
-export default CheckMail;
+}
+
+export default function CheckMailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex justify-center items-center text-4xl font bold">Loading...</div>}>
+      <CheckMailContent />
+    </Suspense>
+  )
+}

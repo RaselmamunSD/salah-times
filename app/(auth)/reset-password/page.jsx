@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FaArrowLeft } from "react-icons/fa6";
 import authService from "@/app/services/auth";
 
-const ResetPasswordPage = () => {
+const ResetPasswordPageContent = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -136,4 +136,12 @@ const ResetPasswordPage = () => {
     );
 };
 
-export default ResetPasswordPage;
+export default function ResetPasswordPage() {
+    return (
+        <div>
+            <Suspense fallback={<div className="min-h-screen flex justify-center items-center text-4xl font bold">Loading...</div>}>
+                <ResetPasswordPageContent />
+            </Suspense>
+        </div>
+    );
+}
